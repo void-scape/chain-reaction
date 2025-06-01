@@ -16,7 +16,7 @@ use bevy::window::PrimaryWindow;
 use bevy_optix::pixel_perfect::OuterCamera;
 
 use crate::ball::{Ball, TowerBall};
-use crate::points::PointEvent;
+use crate::collectables::PointEvent;
 use crate::sampler::Sampler;
 use crate::{Avian, GameState, Layer};
 
@@ -46,7 +46,7 @@ impl Plugin for TowerPlugin {
 #[derive(Component)]
 #[require(
     RigidBody::Kinematic,
-    Collider::rectangle(crate::WIDTH / 2., crate::HEIGHT / 3.),
+    Collider::rectangle(crate::WIDTH / 1.5, crate::HEIGHT / 1.5),
     CollisionLayers::new(Layer::TowerZone, Layer::TowerBall),
     CollisionEventsEnabled,
     Sensor,
@@ -87,11 +87,20 @@ fn invalidate_balls(
 
 fn spawn_tower(
     mut commands: Commands,
+    digits: Res<ButtonInput<KeyCode>>,
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
     slots: Query<(Entity, &GlobalTransform), (With<TowerSlot>, Without<SlotTower>)>,
+
+    mut selection: Local<Tower>,
 ) {
+    if digits.just_pressed(KeyCode::Digit1) {
+        *selection = Tower::Bumper;
+    } else if digits.just_pressed(KeyCode::Digit2) {
+        *selection = Tower::Dispenser;
+    }
+
     let (camera, gt) = camera.into_inner();
     if !input.just_pressed(MouseButton::Left) {
         return;
@@ -126,32 +135,10 @@ fn spawn_tower(
         return;
     }
 
-    info!("spawning tower!");
-
-    commands
-        .spawn((
-            Dispenser,
-            SlotTowerOf(nearest_slot),
-            ChildOf(nearest_slot),
-            Transform::default(),
-        ))
-        .observe(dispense)
-        .observe(tower_bonk);
-
-    // if let Some(world_position) = window
-    //     .cursor_position()
-    //     .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
-    //     .map(|ray| ray.origin.truncate())
-    // {
-    //     commands
-    //         .spawn((
-    //             Dispenser,
-    //             Transform::from_translation(
-    //                 (world_position / crate::RESOLUTION_SCALE).extend(0.),
-    //             ),
-    //         ))
-    //         .observe(dispense);
-    // }
+    selection.spawn(
+        &mut commands,
+        (SlotTowerOf(nearest_slot), ChildOf(nearest_slot)),
+    );
 }
 
 /// Temporarily disable the effect of a tower collision for a [`Ball`].
@@ -183,21 +170,31 @@ fn tower_cooldown<T>(
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter, Component)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, EnumIter, Component)]
 #[require(Bonks::Unlimited, BonkImpulse(1.))]
 pub enum Tower {
+    #[default]
     Bumper,
     Dispenser,
 }
 
 impl Tower {
     pub fn spawn_random(commands: &mut Commands, rng: &mut impl Rng, bundle: impl Bundle) {
-        match Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)]).sample(rng) {
+        Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)])
+            .sample(rng)
+            .spawn(commands, bundle);
+    }
+
+    pub fn spawn(&self, commands: &mut Commands, bundle: impl Bundle) {
+        match self {
             Tower::Bumper => {
-                commands.spawn((Bumper, bundle));
+                commands.spawn((Bumper, bundle)).observe(tower_bonk);
             }
             Tower::Dispenser => {
-                commands.spawn((Dispenser, bundle)).observe(dispense);
+                commands
+                    .spawn((Dispenser, bundle))
+                    .observe(dispense)
+                    .observe(tower_bonk);
             }
         }
     }

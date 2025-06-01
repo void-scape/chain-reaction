@@ -17,12 +17,12 @@ use winit::window::Icon;
 
 mod ball;
 mod cabinet;
+mod collectables;
 mod input;
 mod loading;
 mod menu;
 mod paddle;
 mod particles;
-mod points;
 mod queue;
 mod sampler;
 mod text;
@@ -85,7 +85,7 @@ fn main() {
             input::InputPlugin,
             cabinet::CabinetPlugin,
             text::TextPlugin,
-            points::PointPlugin,
+            collectables::CollectablePlugin,
             tween::TweenPlugin,
         ))
         .init_state::<GameState>()

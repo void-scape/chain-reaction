@@ -36,7 +36,7 @@ impl TowerGrid {
                     commands.spawn((
                         ChildOf(grid_entity),
                         TowerSlot,
-                        DebugCircle::new(12.0),
+                        DebugCircle::new(4.0),
                         Transform::from_translation(position.extend(0.0)),
                     ));
                 }

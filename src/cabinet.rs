@@ -15,7 +15,7 @@ impl Plugin for CabinetPlugin {
 }
 
 fn spawn_edges(mut commands: Commands) {
-    let x = 140.;
+    let x = 160.;
     let y = 130.;
 
     let w = 180.;
@@ -26,10 +26,6 @@ fn spawn_edges(mut commands: Commands) {
     // walls
     commands.spawn((
         RigidBody::Static,
-        //Restitution {
-        //    coefficient: 0.0,
-        //    combine_rule: CoefficientCombine::Min,
-        //},
         Restitution::new(0.7),
         Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
         DebugRect::from_size(Vec2::new(w, h)),
@@ -39,10 +35,6 @@ fn spawn_edges(mut commands: Commands) {
 
     commands.spawn((
         RigidBody::Static,
-        //Restitution {
-        //    coefficient: 0.0,
-        //    combine_rule: CoefficientCombine::Min,
-        //},
         Restitution::new(0.7),
         Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
         DebugRect::from_size(Vec2::new(w, h)),

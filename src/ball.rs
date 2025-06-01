@@ -33,6 +33,7 @@ pub struct Lives(usize);
 #[derive(Component)]
 #[require(
     RigidBody::Dynamic,
+    LinearDamping(0.5),
     Restitution::new(0.7),
     DebugCircle::new(8.),
     Collider::circle(8.)
@@ -42,6 +43,7 @@ pub struct Ball;
 #[derive(Component)]
 #[require(
     RigidBody::Dynamic,
+    LinearDamping(0.5),
     Restitution::new(0.7),
     DebugCircle::color(8., YELLOW),
     Collider::circle(8.),

@@ -41,10 +41,10 @@ const START_ROT: f32 = PI / 7. + PI / 4.;
 const END_OFFSET: f32 = PI / 3.;
 
 fn spawn_paddles(mut commands: Commands) {
-    let w = 70.;
+    let w = 90.;
     let h = 7.5;
 
-    let x = 50.;
+    let x = 60.;
     let y = 50.;
 
     let fact = 1.4;
@@ -54,6 +54,7 @@ fn spawn_paddles(mut commands: Commands) {
         .spawn((
             Paddle,
             RigidBody::Kinematic,
+            Restitution::new(0.7),
             Transform::from_xyz(-x * fact, -crate::HEIGHT / 2. + y + 15., 0.)
                 .with_rotation(Quat::from_rotation_z(START_ROT)),
             Collider::capsule(h, w),
@@ -64,6 +65,7 @@ fn spawn_paddles(mut commands: Commands) {
         .spawn((
             Paddle,
             RigidBody::Kinematic,
+            Restitution::new(0.7),
             Transform::from_xyz(x * fact, -crate::HEIGHT / 2. + y + 15., 0.)
                 .with_rotation(Quat::from_rotation_z(-START_ROT)),
             Collider::capsule(h, w),
@@ -75,6 +77,7 @@ fn spawn_paddles(mut commands: Commands) {
 struct PaddleTarget(Quat);
 
 const PADDLE_SPEED: f32 = 20.0;
+const PADDLE_DOWN_SPEED: f32 = PADDLE_SPEED * 0.8;
 
 fn apply_pressed(
     _trigger: Trigger<Fired<PaddleUp>>,
@@ -122,7 +125,7 @@ fn apply_released(
         };
 
         commands.entity(entity).insert((
-            AngularVelocity(-sign * PADDLE_SPEED),
+            AngularVelocity(-sign * PADDLE_DOWN_SPEED),
             PaddleTarget(Quat::from_rotation_z(sign * START_ROT)),
         ));
     }
