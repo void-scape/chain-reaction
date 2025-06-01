@@ -15,6 +15,7 @@ use bevy_optix::pixel_perfect::CanvasDimensions;
 use winit::window::Icon;
 
 mod ball;
+mod input;
 mod loading;
 mod menu;
 mod paddle;
@@ -42,9 +43,7 @@ fn main() {
                     primary_window: Some(Window {
                         // TODO: Rename
                         title: "Bevy game".to_string(),
-                        canvas: Some("#bevy".to_owned()),
                         fit_canvas_to_parent: true,
-                        prevent_default_event_handling: false,
                         resolution: WindowResolution::new(
                             WIDTH * RESOLUTION_SCALE,
                             HEIGHT * RESOLUTION_SCALE,
@@ -58,9 +57,6 @@ fn main() {
                     ..default()
                 }),
             bevy_tween::DefaultTweenPlugins,
-            //bevy_seedling::SeedlingPlugin {
-            //    ..Default::default()
-            //},
             bevy_enhanced_input::EnhancedInputPlugin,
             avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
             avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
@@ -81,11 +77,27 @@ fn main() {
             tower::TowerPlugin,
             queue::QueuePlugin,
             particles::ParticlePlugin,
+            input::InputPlugin,
         ))
         .init_state::<GameState>()
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);
+
+    #[cfg(target_arch = "wasm32")]
+    app.add_plugins(
+        bevy_seedling::SeedlingPlugin::<firewheel_web_audio::WebAudioBackend> {
+            config: Default::default(),
+            stream_config: Default::default(),
+            spawn_default_pool: true,
+            pool_size: 4..=32,
+        },
+    );
+
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins(bevy_seedling::SeedlingPlugin {
+        ..Default::default()
+    });
 
     app.world_mut()
         .resource_mut::<FixedMainScheduleOrder>()

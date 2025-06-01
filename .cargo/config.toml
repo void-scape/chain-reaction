@@ -1,3 +1,5 @@
-[target.'cfg(target_family = "wasm")']
-runner = "wasm-server-runner"
-rustflags = ['--cfg=getrandom_backend="wasm_js"']
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
+
+[unstable]
+build-std = ["std", "core", "alloc", "panic_abort"]

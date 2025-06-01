@@ -67,6 +67,7 @@ bevy = { version = "0.16", default-features = false, features = [
     "tonemapping_luts",
     "webgl2",
     "x11",
+    "web",
 ] }
 bevy_optix = { path = "bevy_optix" }
 bevy_pretty_text = { path = "bevy_pretty_text" }
@@ -74,6 +75,7 @@ bevy_pretty_text = { path = "bevy_pretty_text" }
 bevy_seedling = { path = "bevy_seedling" }
 webbrowser = { version = "1", features = ["hardened"] }
 rand = "0.8"
+firewheel-web-audio = { git = "https://github.com/CorvusPrudens/firewheel-web-audio" }
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }

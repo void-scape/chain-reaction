@@ -2,16 +2,26 @@ use std::f32::consts::PI;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use bevy_enhanced_input::events::{Completed, Fired};
 use bevy_optix::debug::DebugRect;
+use bevy_seedling::{
+    prelude::Volume,
+    sample::{PitchRange, SamplePlayer},
+};
 
-use crate::{Avian, GameState};
+use crate::{
+    Avian, GameState,
+    input::{PaddleDown, PaddleUp},
+};
 
 pub struct PaddlePlugin;
 
 impl Plugin for PaddlePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), spawn_edges)
-            .add_systems(Avian, update_paddles.before(PhysicsSet::Prepare));
+            .add_systems(Avian, update_paddles.before(PhysicsSet::Prepare))
+            .add_observer(apply_pressed)
+            .add_observer(apply_released);
     }
 }
 
@@ -104,20 +114,65 @@ fn spawn_edges(mut commands: Commands) {
 #[derive(Component)]
 struct PaddleTarget(Quat);
 
-fn update_paddles(
-    mut commands: Commands,
-    input: Res<ButtonInput<KeyCode>>,
-    mut paddles: Query<(Entity, &Transform, Option<&PaddleTarget>), With<Paddle>>,
-) {
-    let speed = 20.;
+const PADDLE_SPEED: f32 = 20.0;
 
-    for (entity, position, target) in paddles.iter_mut() {
+fn apply_pressed(
+    _trigger: Trigger<Fired<PaddleUp>>,
+    paddles: Query<(Entity, &Transform), With<Paddle>>,
+    mut commands: Commands,
+    server: Res<AssetServer>,
+) {
+    commands.spawn((
+        SamplePlayer::new(server.load("audio/pinball/FlipperUp.ogg"))
+            .with_volume(Volume::Decibels(-12.0)),
+        PitchRange(0.99..1.01),
+    ));
+
+    for (entity, position) in paddles.iter() {
         let sign = if position.translation.x > 0.0 {
             -1.
         } else {
             1.
         };
 
+        commands.entity(entity).insert((
+            AngularVelocity(sign * PADDLE_SPEED),
+            PaddleTarget(Quat::from_rotation_z(sign * (START_ROT + END_OFFSET))),
+        ));
+    }
+}
+
+fn apply_released(
+    _trigger: Trigger<Fired<PaddleDown>>,
+    paddles: Query<(Entity, &Transform), With<Paddle>>,
+    mut commands: Commands,
+    server: Res<AssetServer>,
+) {
+    commands.spawn((
+        SamplePlayer::new(server.load("audio/pinball/FlipperDown.ogg"))
+            .with_volume(Volume::Decibels(-12.0)),
+        PitchRange(0.99..1.01),
+    ));
+
+    for (entity, position) in paddles.iter() {
+        let sign = if position.translation.x > 0.0 {
+            -1.
+        } else {
+            1.
+        };
+
+        commands.entity(entity).insert((
+            AngularVelocity(-sign * PADDLE_SPEED),
+            PaddleTarget(Quat::from_rotation_z(sign * START_ROT)),
+        ));
+    }
+}
+
+fn update_paddles(
+    mut commands: Commands,
+    mut paddles: Query<(Entity, &Transform, Option<&PaddleTarget>), With<Paddle>>,
+) {
+    for (entity, position, target) in paddles.iter_mut() {
         if let Some(target) = target {
             if (target.0.angle_between(position.rotation)).abs() < 0.15 {
                 commands
@@ -125,18 +180,6 @@ fn update_paddles(
                     .remove::<PaddleTarget>()
                     .insert(AngularVelocity::default());
             }
-        }
-
-        if input.just_pressed(KeyCode::Space) {
-            commands.entity(entity).insert((
-                AngularVelocity(sign * speed),
-                PaddleTarget(Quat::from_rotation_z(sign * (START_ROT + END_OFFSET))),
-            ));
-        } else if input.just_released(KeyCode::Space) {
-            commands.entity(entity).insert((
-                AngularVelocity(-1. * sign * speed),
-                PaddleTarget(Quat::from_rotation_z(sign * START_ROT)),
-            ));
         }
     }
 }
