@@ -1,7 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(clippy::type_complexity)]
 
-use avian2d::prelude::{Gravity, PhysicsLayer};
+use std::io::Cursor;
+
+use avian2d::prelude::{Gravity, PhysicsLayer, SubstepCount};
 use bevy::DefaultPlugins;
 use bevy::app::{App, FixedMainScheduleOrder};
 use bevy::asset::AssetMetaCheck;
@@ -10,20 +12,19 @@ use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowResolution};
 use bevy::winit::WinitWindows;
 use bevy_optix::pixel_perfect::CanvasDimensions;
-use std::io::Cursor;
 use winit::window::Icon;
 
-use crate::loading::LoadingPlugin;
-use crate::menu::MenuPlugin;
-use crate::player::PlayerPlugin;
-
+mod ball;
 mod loading;
 mod menu;
 mod player;
+mod tower;
 
-pub const WIDTH: f32 = 640.;
-pub const HEIGHT: f32 = 360.;
-pub const RESOLUTION_SCALE: f32 = 2.;
+pub const WIDTH: f32 = 450.;
+pub const HEIGHT: f32 = 520.;
+pub const RESOLUTION_SCALE: f32 = 1.5;
+
+pub const GRAVITY: f32 = 500.;
 
 fn main() {
     let mut app = App::new();
@@ -58,8 +59,8 @@ fn main() {
             //    ..Default::default()
             //},
             bevy_enhanced_input::EnhancedInputPlugin,
-            //avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
-            avian2d::PhysicsPlugins::new(Avian).with_length_unit(8.),
+            avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
+            avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
             bevy_optix::pixel_perfect::PixelPerfectPlugin(CanvasDimensions {
                 width: WIDTH as u32,
                 height: HEIGHT as u32,
@@ -68,10 +69,17 @@ fn main() {
             bevy_optix::debug::DebugPlugin,
             bevy_pretty_text::PrettyTextPlugin,
         ))
-        .add_plugins((LoadingPlugin, MenuPlugin, PlayerPlugin))
+        .add_plugins((
+            loading::LoadingPlugin,
+            menu::MenuPlugin,
+            //player::PlayerPlugin,
+            ball::BallPlugin,
+            tower::TowerPlugin,
+        ))
         .init_state::<GameState>()
         .init_schedule(Avian)
-        .insert_resource(Gravity(Vec2::ZERO))
+        .insert_resource(SubstepCount(12))
+        .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);
 
     app.world_mut()

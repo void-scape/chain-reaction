@@ -1,8 +1,9 @@
-use crate::GameState;
-use crate::loading::TextureAssets;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
+
+use crate::GameState;
+use crate::loading::TextureAssets;
 
 const PLAYER_SPEED: f32 = 200.;
 
