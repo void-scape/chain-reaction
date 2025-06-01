@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(clippy::type_complexity)]
+#![allow(clippy::single_match)]
 
 use std::io::Cursor;
 
@@ -121,6 +122,8 @@ pub struct Avian;
 pub enum Layer {
     #[default]
     Default,
+    TowerBall,
+    TowerZone,
 }
 
 // Sets the icon on windows and X11

@@ -18,15 +18,25 @@ pub struct PaddlePlugin;
 
 impl Plugin for PaddlePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_edges)
-            .add_systems(Avian, update_paddles.before(PhysicsSet::Prepare))
+        app.add_event::<PaddleBonk>()
+            .add_systems(OnEnter(GameState::Playing), spawn_edges)
+            .add_systems(Avian, paddles.before(PhysicsSet::Prepare))
             .add_observer(apply_pressed)
             .add_observer(apply_released);
     }
 }
 
 #[derive(Component)]
+#[require(CollisionEventsEnabled)]
 pub struct Paddle;
+
+/// Bonked a ball
+#[derive(Event)]
+pub struct PaddleBonk(pub Entity);
+
+fn paddle_bonk(trigger: Trigger<OnCollisionStart>, mut writer: EventWriter<PaddleBonk>) {
+    writer.write(PaddleBonk(trigger.collider));
+}
 
 const START_ROT: f32 = PI / 4.;
 const END_OFFSET: f32 = PI / 3.;
@@ -41,23 +51,25 @@ fn spawn_edges(mut commands: Commands) {
     let fact = 1.4;
 
     // paddles
-    commands.spawn((
-        Paddle,
-        RigidBody::Kinematic,
-        Transform::from_xyz(-x * fact, -crate::HEIGHT / 2. + y + 15., 0.)
-            .with_rotation(Quat::from_rotation_z(START_ROT)),
-        //DebugRect::from_size(Vec2::new(w * 2., h)),
-        Collider::capsule(h, w),
-    ));
+    commands
+        .spawn((
+            Paddle,
+            RigidBody::Kinematic,
+            Transform::from_xyz(-x * fact, -crate::HEIGHT / 2. + y + 15., 0.)
+                .with_rotation(Quat::from_rotation_z(START_ROT)),
+            Collider::capsule(h, w),
+        ))
+        .observe(paddle_bonk);
 
-    commands.spawn((
-        Paddle,
-        RigidBody::Kinematic,
-        Transform::from_xyz(x * fact, -crate::HEIGHT / 2. + y + 15., 0.)
-            .with_rotation(Quat::from_rotation_z(-START_ROT)),
-        //DebugRect::from_size(Vec2::new(w * 2., h)),
-        Collider::capsule(h, w),
-    ));
+    commands
+        .spawn((
+            Paddle,
+            RigidBody::Kinematic,
+            Transform::from_xyz(x * fact, -crate::HEIGHT / 2. + y + 15., 0.)
+                .with_rotation(Quat::from_rotation_z(-START_ROT)),
+            Collider::capsule(h, w),
+        ))
+        .observe(paddle_bonk);
 
     let x = 90. + x;
     let y = 105. + y;
@@ -70,6 +82,10 @@ fn spawn_edges(mut commands: Commands) {
     // walls
     commands.spawn((
         RigidBody::Static,
+        Restitution {
+            coefficient: 0.0,
+            combine_rule: CoefficientCombine::Min,
+        },
         Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
         DebugRect::from_size(Vec2::new(w, h)),
         Collider::rectangle(w, h),
@@ -78,6 +94,10 @@ fn spawn_edges(mut commands: Commands) {
 
     commands.spawn((
         RigidBody::Static,
+        Restitution {
+            coefficient: 0.0,
+            combine_rule: CoefficientCombine::Min,
+        },
         Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
         DebugRect::from_size(Vec2::new(w, h)),
         Collider::rectangle(w, h),
@@ -168,7 +188,7 @@ fn apply_released(
     }
 }
 
-fn update_paddles(
+fn paddles(
     mut commands: Commands,
     mut paddles: Query<(Entity, &Transform, Option<&PaddleTarget>), With<Paddle>>,
 ) {
