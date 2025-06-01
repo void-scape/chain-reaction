@@ -52,6 +52,7 @@ jobs:
         with:
           toolchain: stable
           targets: aarch64-apple-darwin
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Build release for Apple Silicon
         run: |
           SDKROOT=$(xcrun -sdk macosx --show-sdk-path) cargo build --profile dist --target=aarch64-apple-darwin
@@ -105,6 +106,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Submodules
@@ -155,6 +157,7 @@ jobs:
       - name: Checkout submodules
         run: git submodule update --init --recursive
 
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Build
         run: |
           cargo build --no-default-features --release --target x86_64-pc-windows-msvc
@@ -204,6 +207,7 @@ jobs:
         run: |
           printf '[toolchain]\nchannel = "nightly-2025-06-01"' > rust-toolchain.toml
           mv .wasm-cargo .cargo
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Install trunk

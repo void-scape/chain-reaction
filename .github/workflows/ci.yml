@@ -13,6 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Install alsa and udev
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
         if: runner.os == 'linux'
@@ -36,6 +37,7 @@ jobs:
         run: |
           printf '[toolchain]\nchannel = "nightly-2025-06-01"' > rust-toolchain.toml
           mv .wasm-cargo .cargo
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Submodules
@@ -50,6 +52,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+      - uses: Leafwing-Studios/cargo-cache@v2
       - name: Install alsa and udev
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
         if: runner.os == 'linux'
