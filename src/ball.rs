@@ -2,6 +2,8 @@ use avian2d::prelude::*;
 use bevy::color::palettes::css::YELLOW;
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
+use bevy_seedling::prelude::Volume;
+use bevy_seedling::sample::SamplePlayer;
 
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
@@ -32,8 +34,8 @@ pub struct Lives(usize);
 #[require(
     RigidBody::Dynamic,
     Restitution::new(0.7),
-    DebugCircle::new(12.),
-    Collider::circle(12.)
+    DebugCircle::new(8.),
+    Collider::circle(8.)
 )]
 pub struct Ball;
 
@@ -41,8 +43,8 @@ pub struct Ball;
 #[require(
     RigidBody::Dynamic,
     Restitution::new(0.7),
-    DebugCircle::color(12., YELLOW),
-    Collider::circle(12.),
+    DebugCircle::color(8., YELLOW),
+    Collider::circle(8.),
     CollisionLayers::new(Layer::TowerBall, [Layer::Default, Layer::TowerZone]),
     ParticleBundle = Self::particles(),
 )]
@@ -62,6 +64,7 @@ pub struct Depleted;
 
 fn spawn_ball(
     mut commands: Commands,
+    server: Res<AssetServer>,
     #[cfg(debug_assertions)] input: Res<ButtonInput<KeyCode>>,
     #[cfg(not(debug_assertions))] mut lives: ResMut<Lives>,
     alive: Query<&TowerBall>,
@@ -82,6 +85,11 @@ fn spawn_ball(
 
         #[cfg(debug_assertions)]
         commands.spawn((TowerBall, transform));
+
+        commands.spawn(
+            SamplePlayer::new(server.load("audio/pinball/1BootUp.ogg"))
+                .with_volume(Volume::Linear(0.5)),
+        );
     }
 }
 

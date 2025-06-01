@@ -17,19 +17,23 @@ use winit::window::Icon;
 
 mod ball;
 mod input;
+mod level;
 mod loading;
 mod menu;
 mod paddle;
 mod particles;
+mod points;
 mod queue;
 mod sampler;
+mod text;
 mod tower;
+mod tween;
 
 pub const WIDTH: f32 = 550.;
-pub const HEIGHT: f32 = 520.;
+pub const HEIGHT: f32 = 750.;
 pub const RESOLUTION_SCALE: f32 = 1.5;
 
-pub const GRAVITY: f32 = 500.;
+pub const GRAVITY: f32 = 400.;
 
 fn main() {
     let mut app = App::new();
@@ -79,6 +83,10 @@ fn main() {
             queue::QueuePlugin,
             particles::ParticlePlugin,
             input::InputPlugin,
+            level::LevelPlugin,
+            text::TextPlugin,
+            points::PointPlugin,
+            tween::TweenPlugin,
         ))
         .init_state::<GameState>()
         .init_schedule(Avian)

@@ -2,8 +2,7 @@ use std::f32::consts::PI;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use bevy_enhanced_input::events::{Completed, Fired};
-use bevy_optix::debug::DebugRect;
+use bevy_enhanced_input::events::Fired;
 use bevy_seedling::{
     prelude::Volume,
     sample::{PitchRange, SamplePlayer},
@@ -19,7 +18,7 @@ pub struct PaddlePlugin;
 impl Plugin for PaddlePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PaddleBonk>()
-            .add_systems(OnEnter(GameState::Playing), spawn_edges)
+            .add_systems(OnEnter(GameState::Playing), spawn_paddles)
             .add_systems(Avian, paddles.before(PhysicsSet::Prepare))
             .add_observer(apply_pressed)
             .add_observer(apply_released);
@@ -38,15 +37,15 @@ fn paddle_bonk(trigger: Trigger<OnCollisionStart>, mut writer: EventWriter<Paddl
     writer.write(PaddleBonk(trigger.collider));
 }
 
-const START_ROT: f32 = PI / 4.;
+const START_ROT: f32 = PI / 7. + PI / 4.;
 const END_OFFSET: f32 = PI / 3.;
 
-fn spawn_edges(mut commands: Commands) {
-    let w = 80.;
-    let h = 10.;
+fn spawn_paddles(mut commands: Commands) {
+    let w = 70.;
+    let h = 7.5;
 
     let x = 50.;
-    let y = 25.;
+    let y = 50.;
 
     let fact = 1.4;
 
@@ -70,65 +69,6 @@ fn spawn_edges(mut commands: Commands) {
             Collider::capsule(h, w),
         ))
         .observe(paddle_bonk);
-
-    let x = 90. + x;
-    let y = 105. + y;
-
-    let w = 200.;
-    let h = 15.;
-
-    let rot = PI / 3.5;
-
-    // walls
-    commands.spawn((
-        RigidBody::Static,
-        Restitution {
-            coefficient: 0.0,
-            combine_rule: CoefficientCombine::Min,
-        },
-        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
-        DebugRect::from_size(Vec2::new(w, h)),
-        Collider::rectangle(w, h),
-        Rotation::radians(-rot),
-    ));
-
-    commands.spawn((
-        RigidBody::Static,
-        Restitution {
-            coefficient: 0.0,
-            combine_rule: CoefficientCombine::Min,
-        },
-        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
-        DebugRect::from_size(Vec2::new(w, h)),
-        Collider::rectangle(w, h),
-        Rotation::radians(rot),
-    ));
-
-    let x = 65. + x;
-    let y = 150. + y;
-
-    let hh = 1000.;
-
-    commands.spawn((
-        RigidBody::Static,
-        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
-        DebugRect::from_size(Vec2::new(h, hh)),
-        Collider::rectangle(h, hh),
-    ));
-
-    commands.spawn((
-        RigidBody::Static,
-        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
-        DebugRect::from_size(Vec2::new(h, hh)),
-        Collider::rectangle(h, hh),
-    ));
-
-    commands.spawn((
-        RigidBody::Static,
-        Transform::from_xyz(0., crate::HEIGHT / 2., 0.),
-        DebugRect::from_size(Vec2::new(hh, 50.)),
-        Collider::rectangle(hh, 50.),
-    ));
 }
 
 #[derive(Component)]

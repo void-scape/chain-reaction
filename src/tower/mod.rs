@@ -4,6 +4,8 @@ use avian2d::prelude::*;
 use bevy::color::palettes::css::{GREEN, RED};
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
+use bevy_seedling::prelude::Volume;
+use bevy_seedling::sample::SamplePlayer;
 use grid::{SlotTower, SlotTowerOf, TowerSlot};
 use rand::Rng;
 use strum_macros::EnumIter;
@@ -14,6 +16,7 @@ use bevy::window::PrimaryWindow;
 use bevy_optix::pixel_perfect::OuterCamera;
 
 use crate::ball::{Ball, TowerBall};
+use crate::points::PointEvent;
 use crate::sampler::Sampler;
 use crate::{Avian, GameState, Layer};
 
@@ -132,7 +135,8 @@ fn spawn_tower(
             ChildOf(nearest_slot),
             Transform::default(),
         ))
-        .observe(dispense);
+        .observe(dispense)
+        .observe(tower_bonk);
 
     // if let Some(world_position) = window
     //     .cursor_position()
@@ -180,7 +184,7 @@ fn tower_cooldown<T>(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter, Component)]
-#[require(Bonks(1), BonkImpulse(1.))]
+#[require(Bonks::Unlimited, BonkImpulse(1.))]
 pub enum Tower {
     Bumper,
     Dispenser,
@@ -202,16 +206,27 @@ impl Tower {
 /// The number of bonks before the tower despawns.
 #[derive(Component)]
 #[require(RigidBody::Kinematic, CollisionEventsEnabled)]
-struct Bonks(usize);
+enum Bonks {
+    Limited(usize),
+    Unlimited,
+}
 
 fn bonks(trigger: Trigger<OnCollisionStart>, mut bonks: Query<&mut Bonks>) {
     if let Ok(mut bonks) = bonks.get_mut(trigger.target()) {
-        bonks.0 = bonks.0.saturating_sub(1);
+        match bonks.as_mut() {
+            Bonks::Limited(bonks) => {
+                *bonks = bonks.saturating_sub(1);
+            }
+            _ => {}
+        }
     }
 }
 
 fn despawn_empty_bonks(mut commands: Commands, bonks: Query<(Entity, &Bonks)>) {
-    for (entity, _) in bonks.iter().filter(|(_, bonks)| bonks.0 == 0) {
+    for (entity, _) in bonks
+        .iter()
+        .filter(|(_, bonks)| matches!(bonks, Bonks::Limited(bonks) if *bonks == 0))
+    {
         commands.entity(entity).despawn();
     }
 }
@@ -220,11 +235,37 @@ fn despawn_empty_bonks(mut commands: Commands, bonks: Query<(Entity, &Bonks)>) {
 #[derive(Component)]
 struct BonkImpulse(f32);
 
+fn tower_bonk(
+    trigger: Trigger<OnCollisionStart>,
+    mut commands: Commands,
+    mut writer: EventWriter<PointEvent>,
+    server: Res<AssetServer>,
+    towers: Query<(&Transform, &Tower)>,
+) {
+    let Ok((transform, tower)) = towers.get(trigger.target()) else {
+        return;
+    };
+
+    match tower {
+        Tower::Bumper => {
+            commands.spawn(
+                SamplePlayer::new(server.load("audio/pinball/1MetalKLANK.ogg"))
+                    .with_volume(Volume::Linear(0.4)),
+            );
+        }
+        _ => {}
+    }
+
+    writer.write(PointEvent {
+        points: 20,
+        position: transform.translation.xy(),
+    });
+}
+
 #[derive(Component)]
 #[require(
     Tower::Bumper,
     BonkImpulse(2.),
-    Bonks(10),
     DebugCircle::color(TOWER_RADIUS, RED),
     Collider::circle(TOWER_RADIUS)
 )]
@@ -233,7 +274,7 @@ pub struct Bumper;
 #[derive(Component)]
 #[require(
     Tower::Dispenser,
-    Bonks(10),
+    Bonks::Limited(10),
     DebugCircle::color(TOWER_RADIUS, GREEN),
     Collider::circle(TOWER_RADIUS)
 )]
