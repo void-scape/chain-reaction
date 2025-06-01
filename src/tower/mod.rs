@@ -100,7 +100,7 @@ fn spawn_tower(
     let Some(world_position) = window
         .cursor_position()
         .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
-        .map(|ray| ray.origin.truncate())
+        .map(|ray| ray.origin.truncate() / crate::RESOLUTION_SCALE)
     else {
         return;
     };
