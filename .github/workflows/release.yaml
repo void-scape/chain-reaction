@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version - in the form of v1.2.3'
+        description: "Version - in the form of v1.2.3"
         required: true
         type: string
 
@@ -48,18 +48,20 @@ jobs:
         run: |
           rm build.rs
       - name: Install rust toolchain for Apple Silicon
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
+          toolchain: nightly-2025-06-01
           targets: aarch64-apple-darwin
+          components: rust-src
       - name: Build release for Apple Silicon
         run: |
           SDKROOT=$(xcrun -sdk macosx --show-sdk-path) cargo build --profile dist --target=aarch64-apple-darwin
       - name: Install rust toolchain for Apple x86
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
+          toolchain: nightly-2025-06-01
           targets: x86_64-apple-darwin
+          components: rust-src
       - name: Build release for x86 Apple
         run: |
           SDKROOT=$(xcrun -sdk macosx --show-sdk-path) cargo build --profile dist --target=x86_64-apple-darwin
@@ -102,9 +104,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
+          toolchain: nightly-2025-06-01
+          components: rust-src
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Submodules
@@ -140,17 +143,19 @@ jobs:
   build-windows:
     runs-on: windows-latest
     permissions:
-        contents: write
-        pull-requests: write
-        repository-projects: write
+      contents: write
+      pull-requests: write
+      repository-projects: write
 
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
+          toolchain: nightly-2025-06-01
           targets: x86_64-pc-windows-msvc
+          components: rust-src, clippy
 
       - name: Checkout submodules
         run: git submodule update --init --recursive
@@ -195,9 +200,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
+          toolchain: nightly-2025-06-01
+          components: rust-src
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Install trunk

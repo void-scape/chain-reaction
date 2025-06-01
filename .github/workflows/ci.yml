@@ -12,7 +12,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2025-06-01
+          components: rust-src
       - name: Install alsa and udev
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
         if: runner.os == 'linux'
@@ -26,10 +29,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: stable
+          toolchain: nightly-2025-06-01
+          components: rust-src
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Add wasm target
@@ -43,9 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          components: clippy
+          toolchain: nightly-2025-06-01
+          components: rust-src, clippy
       - name: Install alsa and udev
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
         if: runner.os == 'linux'
@@ -57,9 +61,9 @@ jobs:
           cargo clippy --workspace --all-targets --all-features -- -Dwarnings
 
   spelling:
-      name: Spelling
-      runs-on: ubuntu-latest
-      steps:
+    name: Spelling
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout Actions Repository
         uses: actions/checkout@v4
       - name: Spell Check Repo
