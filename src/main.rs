@@ -16,8 +16,8 @@ use bevy_optix::pixel_perfect::CanvasDimensions;
 use winit::window::Icon;
 
 mod ball;
+mod cabinet;
 mod input;
-mod level;
 mod loading;
 mod menu;
 mod paddle;
@@ -83,7 +83,7 @@ fn main() {
             queue::QueuePlugin,
             particles::ParticlePlugin,
             input::InputPlugin,
-            level::LevelPlugin,
+            cabinet::CabinetPlugin,
             text::TextPlugin,
             points::PointPlugin,
             tween::TweenPlugin,

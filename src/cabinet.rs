@@ -6,9 +6,9 @@ use bevy_optix::debug::DebugRect;
 
 use crate::GameState;
 
-pub struct LevelPlugin;
+pub struct CabinetPlugin;
 
-impl Plugin for LevelPlugin {
+impl Plugin for CabinetPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), spawn_edges);
     }
