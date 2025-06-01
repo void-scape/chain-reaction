@@ -4,6 +4,7 @@ use avian2d::prelude::*;
 use bevy::color::palettes::css::{GREEN, RED};
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
+use grid::{SlotTower, SlotTowerOf, TowerSlot};
 use rand::Rng;
 use strum_macros::EnumIter;
 
@@ -16,6 +17,8 @@ use crate::ball::{Ball, TowerBall};
 use crate::sampler::Sampler;
 use crate::{Avian, GameState, Layer};
 
+mod grid;
+
 pub const TOWER_SIZE: f32 = 36.0;
 pub const TOWER_RADIUS: f32 = TOWER_SIZE / 2.;
 
@@ -24,7 +27,10 @@ pub struct TowerPlugin;
 impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), spawn_tower_zone)
-            .add_systems(Update, tower_cooldown::<Dispenser>)
+            .add_systems(
+                Update,
+                (tower_cooldown::<Dispenser>, grid::TowerGrid::spawn_slots),
+            )
             .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
             .add_observer(bonks)
             .add_observer(bonk_bounce);
@@ -41,6 +47,7 @@ impl Plugin for TowerPlugin {
     CollisionLayers::new(Layer::TowerZone, Layer::TowerBall),
     CollisionEventsEnabled,
     Sensor,
+    grid::TowerGrid { spacing: Vec2::new(75.0, 75.0) }
 )]
 pub struct TowerZone;
 
@@ -80,25 +87,67 @@ fn spawn_tower(
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
+    slots: Query<(Entity, &GlobalTransform), (With<TowerSlot>, Without<SlotTower>)>,
 ) {
     let (camera, gt) = camera.into_inner();
-
-    if input.just_pressed(MouseButton::Left) {
-        if let Some(world_position) = window
-            .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
-            .map(|ray| ray.origin.truncate())
-        {
-            commands
-                .spawn((
-                    Dispenser,
-                    Transform::from_translation(
-                        (world_position / crate::RESOLUTION_SCALE).extend(0.),
-                    ),
-                ))
-                .observe(dispense);
-        }
+    if !input.just_pressed(MouseButton::Left) {
+        return;
     }
+
+    let Some(world_position) = window
+        .cursor_position()
+        .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
+        .map(|ray| ray.origin.truncate())
+    else {
+        return;
+    };
+
+    // check for the nearest tower slot within some threshold
+
+    let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
+        let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
+        let b = world_position.distance_squared(b.1.compute_transform().translation.xy());
+
+        a.total_cmp(&b)
+    }) else {
+        return;
+    };
+
+    if transform
+        .compute_transform()
+        .translation
+        .xy()
+        .distance(world_position)
+        > 50.0
+    {
+        return;
+    }
+
+    info!("spawning tower!");
+
+    commands
+        .spawn((
+            Dispenser,
+            SlotTowerOf(nearest_slot),
+            ChildOf(nearest_slot),
+            Transform::default(),
+        ))
+        .observe(dispense);
+
+    // if let Some(world_position) = window
+    //     .cursor_position()
+    //     .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
+    //     .map(|ray| ray.origin.truncate())
+    // {
+    //     commands
+    //         .spawn((
+    //             Dispenser,
+    //             Transform::from_translation(
+    //                 (world_position / crate::RESOLUTION_SCALE).extend(0.),
+    //             ),
+    //         ))
+    //         .observe(dispense);
+    // }
 }
 
 /// Temporarily disable the effect of a tower collision for a [`Ball`].
@@ -194,13 +243,14 @@ fn dispense(
     trigger: Trigger<OnCollisionStart>,
     mut commands: Commands,
     filtered: Query<&TowerCooldown<Dispenser>>,
-    transforms: Query<&Transform, With<Dispenser>>,
+    transforms: Query<&GlobalTransform, With<Dispenser>>,
 ) {
     if filtered.contains(trigger.collider) {
         return;
     }
 
-    if let Ok(mut transform) = transforms.get(trigger.target()).copied() {
+    if let Ok(transform) = transforms.get(trigger.target()).copied() {
+        let mut transform = transform.compute_transform();
         transform.translation.y -= 12.;
         commands.spawn((
             Ball,
