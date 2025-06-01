@@ -1,18 +1,31 @@
 use std::marker::PhantomData;
 
 use avian2d::prelude::*;
+use bevy::color::palettes::css::{GREEN, RED};
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use bevy_optix::debug::DebugCircle;
+use rand::Rng;
+use strum_macros::EnumIter;
+
+#[cfg(debug_assertions)]
+use bevy::window::PrimaryWindow;
+#[cfg(debug_assertions)]
 use bevy_optix::pixel_perfect::OuterCamera;
 
 use crate::ball::Ball;
+use crate::sampler::Sampler;
+
+pub const TOWER_SIZE: f32 = 36.0;
+pub const TOWER_RADIUS: f32 = TOWER_SIZE / 2.;
 
 pub struct TowerPlugin;
 
 impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (spawn_tower, tower_cooldown::<Dispenser>));
+        app.add_systems(Update, tower_cooldown::<Dispenser>);
+
+        #[cfg(debug_assertions)]
+        app.add_systems(Update, spawn_tower);
     }
 }
 
@@ -71,15 +84,41 @@ fn tower_cooldown<T>(
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
+pub enum Tower {
+    Bumper,
+    Dispenser,
+}
+
+impl Tower {
+    pub fn spawn_random(commands: &mut Commands, rng: &mut impl Rng, bundle: impl Bundle) {
+        match Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)]).sample(rng) {
+            Tower::Bumper => {
+                commands.spawn((Bumper, bundle));
+            }
+            Tower::Dispenser => {
+                commands.spawn((Dispenser, bundle)).observe(dispense);
+            }
+        }
+    }
+}
+
 #[derive(Component)]
 #[require(
     RigidBody::Kinematic,
-    Restitution::new(0.7),
-    DebugCircle::new(18.),
-    Collider::circle(18.),
+    DebugCircle::color(TOWER_RADIUS, RED),
+    Collider::circle(TOWER_RADIUS)
+)]
+pub struct Bumper;
+
+#[derive(Component)]
+#[require(
+    RigidBody::Kinematic,
+    DebugCircle::color(TOWER_RADIUS, GREEN),
+    Collider::circle(TOWER_RADIUS),
     CollisionEventsEnabled
 )]
-struct Dispenser;
+pub struct Dispenser;
 
 fn dispense(
     trigger: Trigger<OnCollisionStart>,

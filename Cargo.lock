@@ -660,6 +660,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_enoki"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "740289c63cb752adbad3823c49c01d479d853a10d76ccfe5ce3d1f3ea8e14ac2"
+dependencies = [
+ "bevy",
+ "rand",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "bevy_gilrs"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1296,6 +1308,7 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "bevy_enhanced_input",
+ "bevy_enoki",
  "bevy_optix",
  "bevy_pretty_text",
  "bevy_seedling",
@@ -1304,6 +1317,8 @@ dependencies = [
  "image",
  "log",
  "rand",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
  "webbrowser",
  "winit",
 ]
@@ -3324,7 +3339,7 @@ dependencies = [
  "pp-rs",
  "rustc-hash 1.1.0",
  "spirv",
- "strum",
+ "strum 0.26.3",
  "termcolor",
  "thiserror 2.0.12",
  "unicode-xid",
@@ -4689,14 +4704,33 @@ version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.26.4",
 ]
+
+[[package]]
+name = "strum"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
 
 [[package]]
 name = "strum_macros"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77a8c5abcaf0f9ce05d62342b7d298c346515365c36b673df4ebe3ced01fde8"
 dependencies = [
  "heck",
  "proc-macro2",

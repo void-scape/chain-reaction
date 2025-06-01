@@ -3,7 +3,7 @@
 
 use std::io::Cursor;
 
-use avian2d::prelude::{Gravity, PhysicsLayer, SubstepCount};
+use avian2d::prelude::{Gravity, PhysicsLayer};
 use bevy::DefaultPlugins;
 use bevy::app::{App, FixedMainScheduleOrder};
 use bevy::asset::AssetMetaCheck;
@@ -17,10 +17,13 @@ use winit::window::Icon;
 mod ball;
 mod loading;
 mod menu;
+mod particles;
 mod player;
+mod queue;
+mod sampler;
 mod tower;
 
-pub const WIDTH: f32 = 450.;
+pub const WIDTH: f32 = 550.;
 pub const HEIGHT: f32 = 520.;
 pub const RESOLUTION_SCALE: f32 = 1.5;
 
@@ -68,6 +71,7 @@ fn main() {
             }),
             bevy_optix::debug::DebugPlugin,
             bevy_pretty_text::PrettyTextPlugin,
+            bevy_enoki::EnokiPlugin,
         ))
         .add_plugins((
             loading::LoadingPlugin,
@@ -75,10 +79,11 @@ fn main() {
             //player::PlayerPlugin,
             ball::BallPlugin,
             tower::TowerPlugin,
+            queue::QueuePlugin,
+            particles::ParticlePlugin,
         ))
         .init_state::<GameState>()
         .init_schedule(Avian)
-        .insert_resource(SubstepCount(12))
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);
 

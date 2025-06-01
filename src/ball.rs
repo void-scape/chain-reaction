@@ -1,9 +1,12 @@
 use std::f32::consts::PI;
 
 use avian2d::prelude::*;
+use bevy::color::palettes::css::YELLOW;
 use bevy::prelude::*;
 use bevy_optix::debug::{DebugCircle, DebugRect};
 
+use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
+use crate::queue::SpawnTower;
 use crate::{Avian, GameState};
 
 pub struct BallPlugin;
@@ -21,11 +24,12 @@ impl Plugin for BallPlugin {
         .add_systems(Avian, update_paddles.before(PhysicsSet::Prepare))
         .add_systems(
             Update,
-            (spawn_ball, despawn_ball).run_if(in_state(GameState::Playing)),
+            (spawn_ball, (despawn_ball, tower_ball).chain()).run_if(in_state(GameState::Playing)),
         );
     }
 }
 
+#[allow(unused)]
 #[derive(Resource)]
 pub struct Lives(usize);
 
@@ -37,6 +41,25 @@ pub struct Lives(usize);
     Collider::circle(12.)
 )]
 pub struct Ball;
+
+#[derive(Component)]
+#[require(
+    RigidBody::Dynamic,
+    Restitution::new(0.7),
+    DebugCircle::color(12., YELLOW),
+    Collider::circle(12.),
+    ParticleBundle = Self::particles(),
+)]
+pub struct TowerBall;
+
+impl TowerBall {
+    fn particles() -> ParticleBundle {
+        ParticleBundle::from_emitter(
+            ParticleEmitter::from_effect("particles/tower-ball.ron")
+                .with(transform(Transform::from_xyz(0., 0., -1.))),
+        )
+    }
+}
 
 fn spawn_ball(
     mut commands: Commands,
@@ -50,7 +73,7 @@ fn spawn_ball(
     let cond = input.just_pressed(KeyCode::KeyA);
 
     if cond {
-        let transform = Transform::from_xyz(-crate::WIDTH / 2. + 40., crate::HEIGHT / 2. - 20., 0.);
+        let transform = Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.);
 
         #[cfg(not(debug_assertions))]
         if lives.0 > 0 {
@@ -59,7 +82,7 @@ fn spawn_ball(
         }
 
         #[cfg(debug_assertions)]
-        commands.spawn((Ball, transform));
+        commands.spawn((TowerBall, transform));
     }
 }
 
@@ -68,6 +91,22 @@ fn despawn_ball(mut commands: Commands, balls: Query<(Entity, &Transform)>) {
         if transform.translation.y < -crate::HEIGHT / 2. - 12. {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+fn tower_ball(
+    mut commands: Commands,
+    input: Res<ButtonInput<KeyCode>>,
+    tower_ball: Single<(Entity, &Transform), With<TowerBall>>,
+    mut writer: EventWriter<SpawnTower>,
+) {
+    if input.just_pressed(KeyCode::KeyD) {
+        commands
+            .entity(tower_ball.0)
+            .remove::<(ParticleBundle, TowerBall, Sprite, DebugRect)>()
+            .despawn_related::<Emitters>()
+            .insert(Ball);
+        writer.write(SpawnTower(tower_ball.1.translation.xy()));
     }
 }
 
@@ -130,7 +169,7 @@ fn spawn_edges(mut commands: Commands) {
         Rotation::radians(rot),
     ));
 
-    let x = 75. + x;
+    let x = 65. + x;
     let y = 150. + y;
 
     let hh = 1000.;
@@ -139,14 +178,14 @@ fn spawn_edges(mut commands: Commands) {
         RigidBody::Static,
         Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
         DebugRect::from_size(Vec2::new(h, hh)),
-        Collider::rectangle(50., hh),
+        Collider::rectangle(h, hh),
     ));
 
     commands.spawn((
         RigidBody::Static,
         Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
         DebugRect::from_size(Vec2::new(h, hh)),
-        Collider::rectangle(50., hh),
+        Collider::rectangle(h, hh),
     ));
 
     commands.spawn((
