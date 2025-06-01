@@ -15,8 +15,8 @@ where
 {
     pub fn new(choices: &[(T, f32)]) -> Self {
         Self {
-            dist: WeightedIndex::new(choices.into_iter().map(|(_, weight)| *weight)).unwrap(),
-            choices: choices.into_iter().map(|(t, _)| t.clone()).collect(),
+            dist: WeightedIndex::new(choices.iter().map(|(_, weight)| *weight)).unwrap(),
+            choices: choices.iter().map(|(t, _)| t.clone()).collect(),
         }
     }
 

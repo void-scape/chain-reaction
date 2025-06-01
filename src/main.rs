@@ -17,8 +17,8 @@ use winit::window::Icon;
 mod ball;
 mod loading;
 mod menu;
+mod paddle;
 mod particles;
-mod player;
 mod queue;
 mod sampler;
 mod tower;
@@ -76,7 +76,7 @@ fn main() {
         .add_plugins((
             loading::LoadingPlugin,
             menu::MenuPlugin,
-            //player::PlayerPlugin,
+            paddle::PaddlePlugin,
             ball::BallPlugin,
             tower::TowerPlugin,
             queue::QueuePlugin,
