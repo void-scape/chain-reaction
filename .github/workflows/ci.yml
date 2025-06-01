@@ -12,10 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly-2025-06-01
-          components: rust-src
+      - uses: dtolnay/rust-toolchain@stable
       - name: Install alsa and udev
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
         if: runner.os == 'linux'
@@ -29,14 +26,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2025-06-01
+          targets: wasm32-unknown-unknown
           components: rust-src
+      - name: Set up nightly environment
+        run: |
+          echo '[toolchain]\nchannel = "nightly-2025-06-01"' > rust-toolchain.toml
+          mv .wasm-cargo .cargo
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-      - name: Add wasm target
-        run: rustup target add wasm32-unknown-unknown
       - name: Submodules
         run: git submodule update --init --recursive
       - name: Build Release
@@ -46,10 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly-2025-06-01
-          components: rust-src, clippy
+          components: clippy
       - name: Install alsa and udev
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
         if: runner.os == 'linux'

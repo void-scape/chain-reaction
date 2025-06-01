@@ -18,6 +18,10 @@ jobs:
         with:
           toolchain: nightly-2025-06-01
           components: rust-src
+      - name: Set up nightly environment
+        run: |
+          echo '[toolchain]\nchannel = "nightly-2025-06-01"' > rust-toolchain.toml
+          mv .wasm-cargo .cargo
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Install trunk
