@@ -5,24 +5,26 @@ use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
 
+use crate::Layer;
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
 use crate::queue::SpawnTower;
+use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::tower::ValidZone;
-use crate::{GameState, Layer};
 
 pub struct BallPlugin;
 
 impl Plugin for BallPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), |mut commands: Commands| {
-            commands.insert_resource(Lives(2))
-        })
-        .add_systems(
-            Update,
-            (spawn_ball, (despawn_ball, tower_ball, recharge).chain())
-                .run_if(in_state(GameState::Playing)),
-        );
+        app.add_reset(remove_entities::<Or<(With<Ball>, With<TowerBall>)>>)
+            .add_systems(OnEnter(GameState::Playing), |mut commands: Commands| {
+                commands.insert_resource(Lives(2))
+            })
+            .add_systems(
+                Update,
+                (spawn_ball, (despawn_ball, tower_ball, recharge).chain())
+                    .run_if(in_state(GameState::Playing)),
+            );
     }
 }
 
@@ -34,6 +36,7 @@ pub struct Lives(usize);
 #[require(
     RigidBody::Dynamic,
     LinearDamping(0.5),
+    AngularDamping(0.1),
     Restitution::new(0.7),
     DebugCircle::new(8.),
     Collider::circle(8.)
@@ -44,6 +47,7 @@ pub struct Ball;
 #[require(
     RigidBody::Dynamic,
     LinearDamping(0.5),
+    AngularDamping(0.1),
     Restitution::new(0.7),
     DebugCircle::color(8., YELLOW),
     Collider::circle(8.),

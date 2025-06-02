@@ -1,4 +1,4 @@
-use crate::GameState;
+use crate::state::GameState;
 use crate::loading::TextureAssets;
 use bevy::prelude::*;
 

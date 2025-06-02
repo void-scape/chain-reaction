@@ -9,8 +9,9 @@ use bevy_seedling::{
 };
 
 use crate::{
-    Avian, GameState,
+    Avian,
     input::{PaddleDown, PaddleUp},
+    state::{GameState, StateAppExt, remove_entities},
 };
 
 pub struct PaddlePlugin;
@@ -18,6 +19,7 @@ pub struct PaddlePlugin;
 impl Plugin for PaddlePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PaddleBonk>()
+            .add_reset(remove_entities::<With<Paddle>>)
             .add_systems(OnEnter(GameState::Playing), spawn_paddles)
             .add_systems(Avian, paddles.before(PhysicsSet::Prepare))
             .add_observer(apply_pressed)

@@ -25,6 +25,7 @@ mod paddle;
 mod particles;
 mod queue;
 mod sampler;
+mod state;
 mod text;
 mod tower;
 mod tween;
@@ -87,8 +88,8 @@ fn main() {
             text::TextPlugin,
             collectables::CollectablePlugin,
             tween::TweenPlugin,
+            state::StatePlugin,
         ))
-        .init_state::<GameState>()
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);
@@ -113,14 +114,6 @@ fn main() {
         .insert_after(FixedPostUpdate, Avian);
 
     app.run();
-}
-
-#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
-enum GameState {
-    #[default]
-    Loading,
-    Menu,
-    Playing,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, ScheduleLabel)]

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::GameState;
+use crate::state::GameState;
 use crate::tower::{TOWER_SIZE, Tower};
 
 pub struct QueuePlugin;

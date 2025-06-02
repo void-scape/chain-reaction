@@ -4,13 +4,13 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_optix::debug::DebugRect;
 
-use crate::GameState;
+pub const CABZ: f32 = -100.;
 
 pub struct CabinetPlugin;
 
 impl Plugin for CabinetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_edges);
+        app.add_systems(Startup, spawn_edges);
     }
 }
 
@@ -27,7 +27,7 @@ fn spawn_edges(mut commands: Commands) {
     commands.spawn((
         RigidBody::Static,
         Restitution::new(0.7),
-        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
+        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
         DebugRect::from_size(Vec2::new(w, h)),
         Collider::rectangle(w, h),
         Rotation::radians(-rot),
@@ -36,7 +36,7 @@ fn spawn_edges(mut commands: Commands) {
     commands.spawn((
         RigidBody::Static,
         Restitution::new(0.7),
-        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
+        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
         DebugRect::from_size(Vec2::new(w, h)),
         Collider::rectangle(w, h),
         Rotation::radians(rot),
@@ -49,21 +49,21 @@ fn spawn_edges(mut commands: Commands) {
 
     commands.spawn((
         RigidBody::Static,
-        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, 0.),
+        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
         DebugRect::from_size(Vec2::new(h, hh)),
         Collider::rectangle(h, hh),
     ));
 
     commands.spawn((
         RigidBody::Static,
-        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, 0.),
+        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
         DebugRect::from_size(Vec2::new(h, hh)),
         Collider::rectangle(h, hh),
     ));
 
     commands.spawn((
         RigidBody::Static,
-        Transform::from_xyz(0., crate::HEIGHT / 2., 0.),
+        Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
         DebugRect::from_size(Vec2::new(hh, 50.)),
         Collider::rectangle(hh, 50.),
     ));

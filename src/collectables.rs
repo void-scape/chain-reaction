@@ -1,4 +1,5 @@
 use crate::RESOLUTION_SCALE;
+use crate::state::StateAppExt;
 use crate::text::flash_text;
 use bevy::prelude::*;
 use bevy_seedling::prelude::*;
@@ -13,12 +14,18 @@ pub struct CollectablePlugin;
 
 impl Plugin for CollectablePlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PointEvent>()
+        app.add_reset(reset)
+            .add_event::<PointEvent>()
             .add_event::<MoneyEvent>()
             .insert_resource(Points(0))
             .insert_resource(Money(0))
             .add_systems(PostUpdate, effects);
     }
+}
+
+fn reset(mut commands: Commands) {
+    commands.insert_resource(Points(0));
+    commands.insert_resource(Money(0));
 }
 
 pub struct HexColor(pub u32);

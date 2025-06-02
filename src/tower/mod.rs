@@ -18,7 +18,8 @@ use bevy_optix::pixel_perfect::OuterCamera;
 use crate::ball::{Ball, TowerBall};
 use crate::collectables::PointEvent;
 use crate::sampler::Sampler;
-use crate::{Avian, GameState, Layer};
+use crate::state::GameState;
+use crate::{Avian, Layer};
 
 mod grid;
 
@@ -259,6 +260,26 @@ fn tower_bonk(
     });
 }
 
+fn bonk_bounce(
+    trigger: Trigger<OnCollisionStart>,
+    towers: Query<(&Transform, &BonkImpulse), With<Tower>>,
+    mut balls: Query<(&Transform, &mut ExternalImpulse), Or<(With<Ball>, With<TowerBall>)>>,
+) {
+    match (
+        towers.get(trigger.target()),
+        balls.get_mut(trigger.collider),
+    ) {
+        (Ok((transform, mult)), Ok((ball_transform, mut impulse))) => {
+            impulse.apply_impulse(
+                (ball_transform.translation.xy() - transform.translation.xy()).normalize_or_zero()
+                    * 50_000.
+                    * mult.0,
+            );
+        }
+        _ => {}
+    }
+}
+
 #[derive(Component)]
 #[require(
     Tower::Bumper,
@@ -295,25 +316,5 @@ fn dispense(
             TowerCooldown::<Dispenser>::from_seconds(0.5),
             transform,
         ));
-    }
-}
-
-fn bonk_bounce(
-    trigger: Trigger<OnCollisionStart>,
-    towers: Query<(&Transform, &BonkImpulse), With<Tower>>,
-    mut balls: Query<(&Transform, &mut ExternalImpulse), Or<(With<Ball>, With<TowerBall>)>>,
-) {
-    match (
-        towers.get(trigger.target()),
-        balls.get_mut(trigger.collider),
-    ) {
-        (Ok((transform, mult)), Ok((ball_transform, mut impulse))) => {
-            impulse.apply_impulse(
-                (ball_transform.translation.xy() - transform.translation.xy()).normalize_or_zero()
-                    * 50_000.
-                    * mult.0,
-            );
-        }
-        _ => {}
     }
 }
