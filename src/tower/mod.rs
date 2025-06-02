@@ -19,6 +19,8 @@ use crate::collectables::PointEvent;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
 
+use self::grid::TowerGrid;
+
 mod grid;
 
 pub const TOWER_SIZE: f32 = 36.0;
@@ -28,15 +30,18 @@ pub struct TowerPlugin;
 
 impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset(remove_entities::<With<Tower>>)
-            .add_systems(OnEnter(GameState::Playing), spawn_tower_zone)
-            .add_systems(
-                Update,
-                (tower_cooldown::<Dispenser>, grid::TowerGrid::spawn_slots),
-            )
-            .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
-            .add_observer(bonks)
-            .add_observer(bonk_bounce);
+        app.add_reset((
+            remove_entities::<With<Tower>>,
+            remove_entities::<With<TowerGrid>>,
+        ))
+        .add_systems(OnEnter(GameState::Playing), spawn_tower_zone)
+        .add_systems(
+            Update,
+            (tower_cooldown::<Dispenser>, grid::TowerGrid::spawn_slots),
+        )
+        .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
+        .add_observer(bonks)
+        .add_observer(bonk_bounce);
 
         #[cfg(debug_assertions)]
         app.add_systems(Update, spawn_tower);

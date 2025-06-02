@@ -7,11 +7,15 @@ use crate::ball::TowerBall;
 use crate::collectables::Points;
 use crate::state::{GameState, StateAppExt, remove_entities};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
+pub struct StageSet;
+
 pub struct StagePlugin;
 
 impl Plugin for StagePlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset(remove_entities::<With<Stage>>)
+        app.add_event::<AdvanceEvent>()
+            .add_reset(remove_entities::<With<Stage>>)
             .add_systems(OnEnter(GameState::Playing), spawn_stage)
             .add_systems(
                 Update,
@@ -20,7 +24,8 @@ impl Plugin for StagePlugin {
                     Anchor::BottomLeft,
                 ),
             )
-            .add_systems(PreUpdate, stage);
+            .add_systems(PreUpdate, stage.in_set(StageSet))
+            .configure_sets(PreUpdate, StageSet.run_if(in_state(GameState::Playing)));
     }
 }
 
@@ -48,10 +53,10 @@ fn spawn_stage(mut commands: Commands) {
 }
 
 #[derive(Debug, Clone, Component)]
-struct Stage {
-    points: usize,
-    level: usize,
-    lives: usize,
+pub struct Stage {
+    pub points: usize,
+    pub level: usize,
+    pub lives: usize,
 }
 
 impl Stage {
@@ -64,7 +69,7 @@ impl Stage {
     }
 
     pub fn progress(&mut self, acquired_points: usize) -> bool {
-        let progress = acquired_points > self.points;
+        let progress = acquired_points >= self.points;
         self.level += 1;
         self.points = Self::points(self.level);
         self.lives = Self::lives(self.level);
@@ -78,14 +83,19 @@ impl Stage {
 
     fn points(level: usize) -> usize {
         match level {
-            0 => 200,
+            0 => 20,
             1 => 1_000,
+            2 => 1_000,
+            3 => 1_000,
+            4 => 1_000,
+            5 => 1_000,
+            6 => 1_000,
             _ => todo!("points for level {}", level),
         }
     }
 
     fn lives(_level: usize) -> usize {
-        3
+        1
     }
 }
 
@@ -130,11 +140,17 @@ fn win(_: Trigger<OnAdd, Win>, mut commands: Commands) {
 }
 
 fn loose(_: Trigger<OnAdd, Loose>, mut commands: Commands, server: Res<AssetServer>) {
-    commands.set_state(GameState::Reset);
+    commands.set_state(GameState::Leaderboard);
     commands.spawn(
         SamplePlayer::new(server.load("audio/pinball/1destroyed.ogg"))
             .with_volume(Volume::Linear(0.5)),
     );
+}
+
+#[derive(Event)]
+pub struct AdvanceEvent {
+    pub points: usize,
+    pub level: usize,
 }
 
 fn advance(
@@ -142,7 +158,13 @@ fn advance(
     mut commands: Commands,
     server: Res<AssetServer>,
     mut points: ResMut<Points>,
+    stage: Single<&Stage>,
+    mut writer: EventWriter<AdvanceEvent>,
 ) {
+    writer.write(AdvanceEvent {
+        points: points.get(),
+        level: stage.level - 1,
+    });
     commands.spawn(
         SamplePlayer::new(server.load("audio/pinball/1JACKPOT.ogg"))
             .with_volume(Volume::Linear(0.5)),

@@ -19,6 +19,7 @@ mod ball;
 mod cabinet;
 mod collectables;
 mod input;
+mod leaderboard;
 mod loading;
 mod menu;
 mod paddle;
@@ -94,6 +95,7 @@ fn main() {
             tween::TweenPlugin,
             state::StatePlugin,
             stage::StagePlugin,
+            leaderboard::LeaderBoardPlugin,
         ))
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))

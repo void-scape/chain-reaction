@@ -20,6 +20,7 @@ pub enum GameState {
     Loading,
     Menu,
     Playing,
+    Leaderboard,
     Reset,
 }
 
