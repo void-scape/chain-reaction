@@ -63,8 +63,8 @@ impl Stage {
         }
     }
 
-    pub fn progess(&mut self, aquired_points: usize) -> bool {
-        let progress = aquired_points > self.points;
+    pub fn progress(&mut self, acquired_points: usize) -> bool {
+        let progress = acquired_points > self.points;
         self.level += 1;
         self.points = Self::points(self.level);
         self.lives = Self::lives(self.level);
@@ -111,7 +111,7 @@ fn stage(
             );
         } else {
             let mut entity = commands.entity(entity);
-            if stage.progess(points.get()) {
+            if stage.progress(points.get()) {
                 if stage.win() {
                     entity.insert(Win);
                 } else {
