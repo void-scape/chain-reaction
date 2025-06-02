@@ -60,9 +60,9 @@ impl<S> ParticleBundle<S>
 where
     S: ParticleState,
 {
-    //pub fn new(spawners: impl IntoIterator<Item = ParticleEmitter>) -> Self {
-    //    Self(spawners.into_iter().collect(), PhantomData)
-    //}
+    pub fn new(spawners: impl IntoIterator<Item = ParticleEmitter>) -> Self {
+        Self(spawners.into_iter().collect(), PhantomData)
+    }
 
     pub fn from_emitter(emitter: ParticleEmitter) -> Self {
         Self(vec![emitter], PhantomData)

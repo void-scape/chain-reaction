@@ -2,13 +2,9 @@ use avian2d::prelude::*;
 use bevy::color::palettes::css::YELLOW;
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
-use bevy_seedling::prelude::Volume;
-use bevy_seedling::sample::SamplePlayer;
 
-use crate::Layer;
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
-use crate::queue::SpawnTower;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::tower::ValidZone;
 
@@ -16,42 +12,35 @@ pub struct BallPlugin;
 
 impl Plugin for BallPlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset(remove_entities::<Or<(With<Ball>, With<TowerBall>)>>)
-            .add_systems(OnEnter(GameState::Playing), |mut commands: Commands| {
-                commands.insert_resource(Lives(2))
-            })
+        app.add_reset(remove_entities::<With<BallComponents>>)
             .add_systems(
                 Update,
-                (spawn_ball, (despawn_ball, tower_ball, recharge).chain())
+                (despawn_ball, tower_ball, recharge)
+                    .chain()
                     .run_if(in_state(GameState::Playing)),
             );
     }
 }
 
-#[allow(unused)]
-#[derive(Resource)]
-pub struct Lives(usize);
-
-#[derive(Component)]
+#[derive(Default, Component)]
 #[require(
     RigidBody::Dynamic,
     LinearDamping(0.5),
-    AngularDamping(0.1),
+    AngularDamping(0.3),
     Restitution::new(0.7),
-    DebugCircle::new(8.),
     Collider::circle(8.)
 )]
+struct BallComponents;
+
+#[derive(Component)]
+#[require(BallComponents, DebugCircle::new(8.))]
 pub struct Ball;
 
 #[derive(Component)]
 #[require(
-    RigidBody::Dynamic,
-    LinearDamping(0.5),
-    AngularDamping(0.1),
-    Restitution::new(0.7),
+    BallComponents,
     DebugCircle::color(8., YELLOW),
-    Collider::circle(8.),
-    CollisionLayers::new(Layer::TowerBall, [Layer::Default, Layer::TowerZone]),
+    //CollisionLayers::new(Layer::TowerBall, [Layer::Default, Layer::TowerZone]),
     ParticleBundle = Self::particles(),
 )]
 pub struct TowerBall;
@@ -68,37 +57,6 @@ impl TowerBall {
 #[derive(Default, Component)]
 pub struct Depleted;
 
-fn spawn_ball(
-    mut commands: Commands,
-    server: Res<AssetServer>,
-    #[cfg(debug_assertions)] input: Res<ButtonInput<KeyCode>>,
-    #[cfg(not(debug_assertions))] mut lives: ResMut<Lives>,
-    alive: Query<&TowerBall>,
-) {
-    #[cfg(not(debug_assertions))]
-    let cond = alive.is_empty();
-    #[cfg(debug_assertions)]
-    let cond = alive.is_empty() || input.just_pressed(KeyCode::KeyA);
-
-    if cond {
-        let transform = Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.);
-
-        #[cfg(not(debug_assertions))]
-        if lives.0 > 0 {
-            lives.0 -= 1;
-            commands.spawn((Ball, transform));
-        }
-
-        #[cfg(debug_assertions)]
-        commands.spawn((TowerBall, transform));
-
-        commands.spawn(
-            SamplePlayer::new(server.load("audio/pinball/1BootUp.ogg"))
-                .with_volume(Volume::Linear(0.5)),
-        );
-    }
-}
-
 fn despawn_ball(mut commands: Commands, balls: Query<(Entity, &Transform)>) {
     for (entity, transform) in balls.iter() {
         if transform.translation.y < -crate::HEIGHT / 2. - 12. {
@@ -111,7 +69,7 @@ fn tower_ball(
     mut commands: Commands,
     input: Res<ButtonInput<KeyCode>>,
     tower_ball: Single<(Entity, &Transform), (With<TowerBall>, With<ValidZone>, Without<Depleted>)>,
-    mut writer: EventWriter<SpawnTower>,
+    //mut writer: EventWriter<SpawnTower>,
 ) {
     if input.just_pressed(KeyCode::KeyD) {
         commands
@@ -124,7 +82,7 @@ fn tower_ball(
             )>()
             .despawn_related::<Emitters>()
             .insert((Ball, Depleted));
-        writer.write(SpawnTower(tower_ball.1.translation.xy()));
+        //writer.write(SpawnTower(tower_ball.1.translation.xy()));
     }
 }
 

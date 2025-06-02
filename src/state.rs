@@ -39,6 +39,12 @@ pub fn remove_entities<T: QueryFilter>(mut commands: Commands, entities: Query<E
     }
 }
 
+pub fn insert_resource<R: Resource + Clone>(res: R) -> impl Fn(Commands) {
+    move |mut commands| {
+        commands.insert_resource(res.clone());
+    }
+}
+
 pub trait StateAppExt {
     fn add_reset<M>(&mut self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> &mut Self;
 }

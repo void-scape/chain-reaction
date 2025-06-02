@@ -1,7 +1,8 @@
 use crate::RESOLUTION_SCALE;
-use crate::state::StateAppExt;
+use crate::state::{StateAppExt, insert_resource};
 use crate::text::flash_text;
 use bevy::prelude::*;
+use bevy_optix::debug::debug_res;
 use bevy_seedling::prelude::*;
 use std::usize;
 
@@ -14,18 +15,34 @@ pub struct CollectablePlugin;
 
 impl Plugin for CollectablePlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset(reset)
+        app.add_reset((insert_resource(Points(0)), insert_resource(Money(0))))
             .add_event::<PointEvent>()
             .add_event::<MoneyEvent>()
             .insert_resource(Points(0))
             .insert_resource(Money(0))
-            .add_systems(PostUpdate, effects);
+            .add_systems(PostUpdate, effects)
+            .add_systems(
+                Update,
+                (
+                    debug_res::<Money>(
+                        Transform::from_xyz(
+                            -crate::RES_WIDTH / 2.,
+                            -crate::RES_HEIGHT / 2. + 40.,
+                            500.,
+                        ),
+                        bevy::sprite::Anchor::BottomLeft,
+                    ),
+                    debug_res::<Points>(
+                        Transform::from_xyz(
+                            -crate::RES_WIDTH / 2.,
+                            -crate::RES_HEIGHT / 2. + 80.,
+                            500.,
+                        ),
+                        bevy::sprite::Anchor::BottomLeft,
+                    ),
+                ),
+            );
     }
-}
-
-fn reset(mut commands: Commands) {
-    commands.insert_resource(Points(0));
-    commands.insert_resource(Money(0));
 }
 
 pub struct HexColor(pub u32);
@@ -40,8 +57,18 @@ impl Into<Color> for HexColor {
     }
 }
 
-#[derive(Resource)]
+#[derive(Debug, Clone, Resource)]
 pub struct Points(usize);
+
+impl Points {
+    pub fn get(&self) -> usize {
+        self.0
+    }
+
+    pub fn reset(&mut self) {
+        self.0 = 0;
+    }
+}
 
 #[derive(Event)]
 pub struct PointEvent {
@@ -49,7 +76,7 @@ pub struct PointEvent {
     pub position: Vec2,
 }
 
-#[derive(Resource)]
+#[derive(Debug, Clone, Resource)]
 pub struct Money(usize);
 
 #[derive(Event)]

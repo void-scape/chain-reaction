@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use avian2d::prelude::*;
+use bevy::color::palettes::css::GREY;
 use bevy::prelude::*;
 use bevy_optix::debug::DebugRect;
 
@@ -28,7 +29,7 @@ fn spawn_edges(mut commands: Commands) {
         RigidBody::Static,
         Restitution::new(0.7),
         Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size(Vec2::new(w, h)),
+        DebugRect::from_size_color(Vec2::new(w, h), GREY),
         Collider::rectangle(w, h),
         Rotation::radians(-rot),
     ));
@@ -37,7 +38,7 @@ fn spawn_edges(mut commands: Commands) {
         RigidBody::Static,
         Restitution::new(0.7),
         Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size(Vec2::new(w, h)),
+        DebugRect::from_size_color(Vec2::new(w, h), GREY),
         Collider::rectangle(w, h),
         Rotation::radians(rot),
     ));
@@ -50,21 +51,21 @@ fn spawn_edges(mut commands: Commands) {
     commands.spawn((
         RigidBody::Static,
         Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size(Vec2::new(h, hh)),
+        DebugRect::from_size_color(Vec2::new(h, hh), GREY),
         Collider::rectangle(h, hh),
     ));
 
     commands.spawn((
         RigidBody::Static,
         Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size(Vec2::new(h, hh)),
+        DebugRect::from_size_color(Vec2::new(h, hh), GREY),
         Collider::rectangle(h, hh),
     ));
 
     commands.spawn((
         RigidBody::Static,
         Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
-        DebugRect::from_size(Vec2::new(hh, 50.)),
+        DebugRect::from_size_color(Vec2::new(hh, 50.), GREY),
         Collider::rectangle(hh, 50.),
     ));
 }

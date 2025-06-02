@@ -7,7 +7,6 @@ use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
 use grid::{SlotTower, SlotTowerOf, TowerSlot};
-use rand::Rng;
 use strum_macros::EnumIter;
 
 #[cfg(debug_assertions)]
@@ -17,8 +16,7 @@ use bevy_optix::pixel_perfect::OuterCamera;
 
 use crate::ball::{Ball, TowerBall};
 use crate::collectables::PointEvent;
-use crate::sampler::Sampler;
-use crate::state::GameState;
+use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
 
 mod grid;
@@ -30,7 +28,8 @@ pub struct TowerPlugin;
 
 impl Plugin for TowerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_tower_zone)
+        app.add_reset(remove_entities::<With<Tower>>)
+            .add_systems(OnEnter(GameState::Playing), spawn_tower_zone)
             .add_systems(
                 Update,
                 (tower_cooldown::<Dispenser>, grid::TowerGrid::spawn_slots),
@@ -180,11 +179,11 @@ pub enum Tower {
 }
 
 impl Tower {
-    pub fn spawn_random(commands: &mut Commands, rng: &mut impl Rng, bundle: impl Bundle) {
-        Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)])
-            .sample(rng)
-            .spawn(commands, bundle);
-    }
+    //pub fn spawn_random(commands: &mut Commands, rng: &mut impl Rng, bundle: impl Bundle) {
+    //    Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)])
+    //        .sample(rng)
+    //        .spawn(commands, bundle);
+    //}
 
     pub fn spawn(&self, commands: &mut Commands, bundle: impl Bundle) {
         match self {
@@ -238,7 +237,7 @@ fn tower_bonk(
     mut commands: Commands,
     mut writer: EventWriter<PointEvent>,
     server: Res<AssetServer>,
-    towers: Query<(&Transform, &Tower)>,
+    towers: Query<(&GlobalTransform, &Tower)>,
 ) {
     let Ok((transform, tower)) = towers.get(trigger.target()) else {
         return;
@@ -256,7 +255,7 @@ fn tower_bonk(
 
     writer.write(PointEvent {
         points: 20,
-        position: transform.translation.xy(),
+        position: transform.translation().xy(),
     });
 }
 

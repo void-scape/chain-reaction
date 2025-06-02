@@ -23,8 +23,9 @@ mod loading;
 mod menu;
 mod paddle;
 mod particles;
-mod queue;
+//mod queue;
 mod sampler;
+mod stage;
 mod state;
 mod text;
 mod tower;
@@ -32,7 +33,10 @@ mod tween;
 
 pub const WIDTH: f32 = 550.;
 pub const HEIGHT: f32 = 750.;
-pub const RESOLUTION_SCALE: f32 = 1.5;
+pub const RESOLUTION_SCALE: f32 = 1.;
+
+pub const RES_WIDTH: f32 = WIDTH * RESOLUTION_SCALE;
+pub const RES_HEIGHT: f32 = HEIGHT * RESOLUTION_SCALE;
 
 pub const GRAVITY: f32 = 400.;
 
@@ -81,7 +85,7 @@ fn main() {
             paddle::PaddlePlugin,
             ball::BallPlugin,
             tower::TowerPlugin,
-            queue::QueuePlugin,
+            //queue::QueuePlugin,
             particles::ParticlePlugin,
             input::InputPlugin,
             cabinet::CabinetPlugin,
@@ -89,6 +93,7 @@ fn main() {
             collectables::CollectablePlugin,
             tween::TweenPlugin,
             state::StatePlugin,
+            stage::StagePlugin,
         ))
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
