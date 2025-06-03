@@ -138,7 +138,36 @@ macro_rules! float_tween {
             }
         }
 
-        impl Interpolator for $tween {
+        impl bevy_tween::prelude::Interpolator for $tween {
+            type Item = $name;
+
+            fn interpolate(&self, item: &mut Self::Item, value: f32) {
+                item.0 = self.start.lerp(self.end, value);
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! float_tween_wrapper {
+    ($name:ident, $func:ident, $tween:ident) => {
+        pub fn $func(start: f32, end: f32) -> $tween {
+            $tween::new(start, end)
+        }
+
+        #[derive(Component)]
+        pub struct $tween {
+            start: f32,
+            end: f32,
+        }
+
+        impl $tween {
+            pub fn new(start: f32, end: f32) -> Self {
+                Self { start, end }
+            }
+        }
+
+        impl bevy_tween::prelude::Interpolator for $tween {
             type Item = $name;
 
             fn interpolate(&self, item: &mut Self::Item, value: f32) {

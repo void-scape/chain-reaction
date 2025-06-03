@@ -9,7 +9,7 @@ use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
 use strum_macros::EnumIter;
 
-use crate::ball::{Ball, TowerBall};
+use crate::ball::{Ball, PaddleRestMult, TowerBall};
 use crate::collectables::PointEvent;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
@@ -51,7 +51,7 @@ impl Plugin for TowerPlugin {
 #[require(
     RigidBody::Kinematic,
     Collider::rectangle(crate::WIDTH / 1.5, crate::HEIGHT / 1.5),
-    CollisionLayers::new(Layer::TowerZone, Layer::TowerBall),
+    CollisionLayers::new(Layer::TowerZone, Layer::Ball),
     CollisionEventsEnabled,
     Sensor,
     grid::TowerGrid { spacing: Vec2::new(75.0, 75.0) }
@@ -242,6 +242,7 @@ fn tower_bonk(
     mut writer: EventWriter<PointEvent>,
     server: Res<AssetServer>,
     towers: Query<(&GlobalTransform, &Tower)>,
+    collider: Query<Option<&PaddleRestMult>>,
 ) {
     let Ok((transform, tower)) = towers.get(trigger.target()) else {
         return;
@@ -257,9 +258,14 @@ fn tower_bonk(
         _ => {}
     }
 
+    let mut points = 20.;
+    if let Ok(Some(paddle_mult)) = collider.get(trigger.collider) {
+        points *= 1. + paddle_mult.0;
+    }
+
     writer.write(PointEvent {
-        points: 20,
         position: transform.translation().xy(),
+        points: (points as usize).max(1),
     });
 }
 

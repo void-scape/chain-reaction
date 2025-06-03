@@ -131,7 +131,8 @@ pub struct Avian;
 pub enum Layer {
     #[default]
     Default,
-    TowerBall,
+    Ball,
+    Paddle,
     TowerZone,
 }
 

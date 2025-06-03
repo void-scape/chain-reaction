@@ -2,7 +2,9 @@ use avian2d::prelude::*;
 use bevy::color::palettes::css::YELLOW;
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
+use bevy_tween::{BevyTweenRegisterSystems, component_tween_system};
 
+use crate::Layer;
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
 use crate::state::{Playing, StateAppExt, remove_entities};
@@ -16,9 +18,15 @@ impl Plugin for BallPlugin {
             .add_systems(
                 Update,
                 (despawn_ball, tower_ball, recharge).chain().in_set(Playing),
-            );
+            )
+            .add_tween_systems(component_tween_system::<PaddleRestMultTween>());
     }
 }
+
+/// Stores the paddle rest time when this ball was hit.
+#[derive(Component)]
+pub struct PaddleRestMult(pub f32);
+crate::float_tween_wrapper!(PaddleRestMult, paddle_mult, PaddleRestMultTween);
 
 #[derive(Default, Component)]
 #[require(
@@ -26,7 +34,8 @@ impl Plugin for BallPlugin {
     LinearDamping(0.5),
     AngularDamping(0.3),
     Restitution::new(0.7),
-    Collider::circle(8.)
+    Collider::circle(8.),
+    CollisionLayers::new(Layer::Ball, [Layer::Default, Layer::Paddle])
 )]
 pub struct BallComponents;
 
