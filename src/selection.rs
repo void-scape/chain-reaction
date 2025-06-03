@@ -106,16 +106,21 @@ fn spawn_selection(
         Transform::from_xyz(0., crate::RES_HEIGHT / 3., SELECTIONZ),
     ));
 
-    //let mut rng = rand::thread_rng();
-    //Sampler::new(&[(Tower::Bumper, 1.), (Tower::Dispenser, 0.5)]).sample(&mut rng);
+    let mut rng = rand::thread_rng();
 
     let Some(pack) = packs.0.pop() else {
         debug_assert!(false, "`FeaturePacks` has 0 packs");
         return;
     };
 
+    let sampler = crate::sampler::Sampler::new(&[
+        (Tower::Bumper, 1.),
+        (Tower::Dispenser, 0.5),
+        (Tower::MoneyBumper, 0.5),
+    ]);
+
     let towers = match pack {
-        FeaturePack::Starter => [Tower::Bumper, Tower::Dispenser, Tower::Bumper],
+        FeaturePack::Starter => (0..3).map(|_| sampler.sample(&mut rng)).collect::<Vec<_>>(),
     };
 
     let positions = [-300., 0., 300.];
@@ -134,7 +139,7 @@ fn spawn_selection(
 
         commands.spawn((
             Selection,
-            Text2d::new(format!("{:?}", tower)),
+            Text2d::new(format!("{tower:?}")),
             Transform::from_xyz(x, y - 40., SELECTIONZ),
             HIGH_RES_LAYER,
         ));
@@ -142,6 +147,7 @@ fn spawn_selection(
         let desc = match tower {
             Tower::Bumper => "Bumps balls",
             Tower::Dispenser => "Dispenses balls",
+            Tower::MoneyBumper => "Earn money",
         };
 
         commands.spawn((

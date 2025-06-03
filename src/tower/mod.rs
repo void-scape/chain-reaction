@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use avian2d::prelude::*;
-use bevy::color::palettes::css::{GREEN, RED};
+use bevy::color::palettes::css::{GREEN, RED, YELLOW};
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
@@ -10,7 +10,7 @@ use bevy_seedling::sample::SamplePlayer;
 use strum_macros::EnumIter;
 
 use crate::ball::{Ball, PaddleRestMult, TowerBall};
-use crate::collectables::PointEvent;
+use crate::collectables::{MoneyEvent, PointEvent};
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
 
@@ -145,6 +145,10 @@ fn invalidate_balls(
 //    );
 //}
 
+/// The base amount of points a tower should give.
+#[derive(Component)]
+pub struct Points(pub usize);
+
 /// Temporarily disable the effect of a tower collision for a [`Ball`].
 #[derive(Component)]
 pub struct TowerCooldown<T: 'static> {
@@ -179,6 +183,7 @@ fn tower_cooldown<T>(
 pub enum Tower {
     #[default]
     Bumper,
+    MoneyBumper,
     Dispenser,
 }
 
@@ -193,6 +198,12 @@ impl Tower {
         match self {
             Tower::Bumper => {
                 commands.spawn((Bumper, bundle)).observe(tower_bonk);
+            }
+            Tower::MoneyBumper => {
+                commands
+                    .spawn((MoneyBumper, bundle))
+                    .observe(kaching)
+                    .observe(tower_bonk);
             }
             Tower::Dispenser => {
                 commands
@@ -241,10 +252,10 @@ fn tower_bonk(
     mut commands: Commands,
     mut writer: EventWriter<PointEvent>,
     server: Res<AssetServer>,
-    towers: Query<(&GlobalTransform, &Tower)>,
+    towers: Query<(&GlobalTransform, &Points, &Tower)>,
     collider: Query<Option<&PaddleRestMult>>,
 ) {
-    let Ok((transform, tower)) = towers.get(trigger.target()) else {
+    let Ok((transform, Points(points), tower)) = towers.get(trigger.target()) else {
         return;
     };
 
@@ -258,7 +269,11 @@ fn tower_bonk(
         _ => {}
     }
 
-    let mut points = 20.;
+    if *points == 0 {
+        return;
+    }
+
+    let mut points = *points as f32;
     if let Ok(Some(paddle_mult)) = collider.get(trigger.collider) {
         points *= 1. + paddle_mult.0;
     }
@@ -330,6 +345,7 @@ fn bonk_bounce(
 #[derive(Component)]
 #[require(
     Tower::Bumper,
+    Points(20),
     BonkImpulse(2.),
     DebugCircle::color(TOWER_RADIUS, RED),
     Collider::circle(TOWER_RADIUS)
@@ -338,7 +354,34 @@ pub struct Bumper;
 
 #[derive(Component)]
 #[require(
+    Tower::MoneyBumper,
+    Points(0),
+    Bonks::Limited(3),
+    BonkImpulse(1.5),
+    DebugCircle::color(TOWER_RADIUS * 0.666, YELLOW),
+    Collider::circle(TOWER_RADIUS * 0.666)
+)]
+pub struct MoneyBumper;
+
+fn kaching(
+    trigger: Trigger<OnCollisionStart>,
+    transforms: Query<&GlobalTransform, With<MoneyBumper>>,
+    mut event_writer: EventWriter<MoneyEvent>,
+) -> Result {
+    let transform = transforms.get(trigger.target())?;
+
+    event_writer.write(MoneyEvent {
+        money: 1,
+        position: transform.translation().xy(),
+    });
+
+    Ok(())
+}
+
+#[derive(Component)]
+#[require(
     Tower::Dispenser,
+    Points(10),
     Bonks::Limited(10),
     DebugCircle::color(TOWER_RADIUS, GREEN),
     Collider::circle(TOWER_RADIUS)
@@ -373,14 +416,4 @@ fn dispense(
             LinearVelocity(initial_velocity * 0.75),
         ));
     }
-
-    // if let Ok(transform) = transforms.get(trigger.target()).copied() {
-    //     let mut transform = transform.compute_transform();
-    //     transform.translation.y -= 12.;
-    //     commands.spawn((
-    //         Ball,
-    //         TowerCooldown::<Dispenser>::from_seconds(0.5),
-    //         transform,
-    //     ));
-    // }
 }
