@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::time::Duration;
 
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{GREEN, RED};
@@ -31,7 +32,11 @@ impl Plugin for TowerPlugin {
         .add_systems(OnEnter(GameState::StartGame), spawn_tower_zone)
         .add_systems(
             Update,
-            (tower_cooldown::<Dispenser>, grid::TowerGrid::spawn_slots),
+            (
+                tower_cooldown::<Dispenser>,
+                grid::TowerGrid::spawn_slots,
+                debug_impulse,
+            ),
         )
         .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
         .add_observer(bonks)
@@ -258,21 +263,59 @@ fn tower_bonk(
     });
 }
 
+#[derive(Component)]
+struct ImpulseGizmo {
+    impulse: Vec2,
+    timer: Timer,
+}
+
+fn debug_impulse(
+    mut impulses: Query<(Entity, &GlobalTransform, &mut ImpulseGizmo)>,
+    mut gizmos: Gizmos,
+    mut commands: Commands,
+    time: Res<Time>,
+) {
+    let delta = time.delta();
+    for (entity, position, mut impulse) in impulses.iter_mut() {
+        let translation = position.translation().xy();
+        let scale_factor = 5e-4;
+
+        gizmos.arrow_2d(
+            translation,
+            translation + impulse.impulse * scale_factor,
+            Color::WHITE,
+        );
+
+        if impulse.timer.tick(delta).just_finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 fn bonk_bounce(
     trigger: Trigger<OnCollisionStart>,
-    towers: Query<(&Transform, &BonkImpulse), With<Tower>>,
-    mut balls: Query<(&Transform, &mut ExternalImpulse), Or<(With<Ball>, With<TowerBall>)>>,
+    towers: Query<(&GlobalTransform, &BonkImpulse), With<Tower>>,
+    mut balls: Query<(&GlobalTransform, &mut ExternalImpulse), Or<(With<Ball>, With<TowerBall>)>>,
+    mut commands: Commands,
 ) {
     match (
         towers.get(trigger.target()),
         balls.get_mut(trigger.collider),
     ) {
-        (Ok((transform, mult)), Ok((ball_transform, mut impulse))) => {
-            impulse.apply_impulse(
-                (ball_transform.translation.xy() - transform.translation.xy()).normalize_or_zero()
-                    * 50_000.
-                    * mult.0,
-            );
+        (Ok((transform, mult)), Ok((ball_transform, mut bonk))) => {
+            let ball_trans = ball_transform.translation().xy();
+            let tower_trans = transform.translation().xy();
+
+            let impulse = (ball_trans - tower_trans).normalize_or_zero() * 38_000. * mult.0;
+            bonk.apply_impulse(impulse);
+
+            commands.spawn((
+                ImpulseGizmo {
+                    impulse,
+                    timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
+                },
+                ball_transform.compute_transform(),
+            ));
         }
         _ => {}
     }
@@ -298,21 +341,40 @@ pub struct Dispenser;
 
 fn dispense(
     trigger: Trigger<OnCollisionStart>,
-    mut commands: Commands,
+    balls: Query<(&GlobalTransform, &LinearVelocity), Or<(With<Ball>, With<TowerBall>)>>,
     filtered: Query<&TowerCooldown<Dispenser>>,
     transforms: Query<&GlobalTransform, With<Dispenser>>,
+    mut commands: Commands,
 ) {
     if filtered.contains(trigger.collider) {
         return;
     }
 
-    if let Ok(transform) = transforms.get(trigger.target()).copied() {
-        let mut transform = transform.compute_transform();
-        transform.translation.y -= 12.;
+    if let (Ok(tower), Ok((ball, velocity))) = (
+        transforms.get(trigger.target()),
+        balls.get(trigger.collider),
+    ) {
+        let tower = tower.compute_transform();
+        let ball = ball.translation().xy();
+
+        let initial_velocity =
+            (tower.translation.xy() - ball).normalize_or_zero() * velocity.0.length();
+
         commands.spawn((
             Ball,
             TowerCooldown::<Dispenser>::from_seconds(0.5),
-            transform,
+            tower,
+            LinearVelocity(initial_velocity * 0.75),
         ));
     }
+
+    // if let Ok(transform) = transforms.get(trigger.target()).copied() {
+    //     let mut transform = transform.compute_transform();
+    //     transform.translation.y -= 12.;
+    //     commands.spawn((
+    //         Ball,
+    //         TowerCooldown::<Dispenser>::from_seconds(0.5),
+    //         transform,
+    //     ));
+    // }
 }
