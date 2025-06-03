@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use std::time::Duration;
 
+use avian2d::math::PI;
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{GREEN, RED, YELLOW};
 use bevy::prelude::*;
@@ -54,7 +55,7 @@ impl Plugin for TowerPlugin {
     CollisionLayers::new(Layer::TowerZone, Layer::Ball),
     CollisionEventsEnabled,
     Sensor,
-    grid::TowerGrid { spacing: Vec2::new(75.0, 75.0) }
+    grid::TowerGrid { spacing: Vec2::new(75.0, 75.0), rotation_rads: PI * 0.25 }
 )]
 pub struct TowerZone;
 
