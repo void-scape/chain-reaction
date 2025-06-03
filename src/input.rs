@@ -73,6 +73,15 @@ fn action_ctx(
                     commands.spawn(Actions::<Menu>::default());
                 }
             }
+            GameState::Selection => {
+                if let Some(entity) = active {
+                    commands.entity(*entity).despawn();
+                }
+
+                if let Some(entity) = menu {
+                    commands.entity(*entity).despawn();
+                }
+            }
             _ => {
                 if let Some(entity) = menu {
                     commands.entity(*entity).despawn();

@@ -5,7 +5,7 @@ use bevy_seedling::prelude::*;
 
 use crate::ball::TowerBall;
 use crate::collectables::Points;
-use crate::state::{GameState, StateAppExt, remove_entities};
+use crate::state::{GameState, Playing, StateAppExt, remove_entities};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct StageSet;
@@ -16,7 +16,7 @@ impl Plugin for StagePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<AdvanceEvent>()
             .add_reset(remove_entities::<With<Stage>>)
-            .add_systems(OnEnter(GameState::Playing), spawn_stage)
+            .add_systems(OnEnter(GameState::StartGame), spawn_stage)
             .add_systems(
                 Update,
                 debug_single::<Stage>(
@@ -25,7 +25,7 @@ impl Plugin for StagePlugin {
                 ),
             )
             .add_systems(PreUpdate, stage.in_set(StageSet))
-            .configure_sets(PreUpdate, StageSet.run_if(in_state(GameState::Playing)));
+            .configure_sets(PreUpdate, StageSet.in_set(Playing));
     }
 }
 
@@ -83,14 +83,15 @@ impl Stage {
 
     fn points(level: usize) -> usize {
         match level {
-            0 => 20,
-            1 => 1_000,
-            2 => 1_000,
-            3 => 1_000,
-            4 => 1_000,
-            5 => 1_000,
-            6 => 1_000,
-            _ => todo!("points for level {}", level),
+            0 => 0,
+            _ => 20,
+            //1 => 0,
+            //2 => 0,
+            //3 => 0,
+            //4 => 0,
+            //5 => 0,
+            //6 => 0,
+            //_ => todo!("points for level {}", level),
         }
     }
 
@@ -109,11 +110,12 @@ fn stage(
     if alive.is_empty() {
         let (entity, mut stage) = stage.into_inner();
 
-        let transform = Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.);
-
         if stage.lives > 0 {
             stage.lives -= 1;
-            commands.spawn((TowerBall, transform));
+            commands.spawn((
+                TowerBall,
+                Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.),
+            ));
 
             commands.spawn(
                 SamplePlayer::new(server.load("audio/pinball/1BootUp.ogg"))
@@ -170,4 +172,5 @@ fn advance(
             .with_volume(Volume::Linear(0.5)),
     );
     points.reset();
+    commands.set_state(GameState::Selection);
 }

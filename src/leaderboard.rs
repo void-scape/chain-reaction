@@ -79,14 +79,15 @@ fn spawn_leaderboard(
         Transform::from_xyz(0., crate::RES_HEIGHT / 3., LEADERZ),
     ));
 
-    data.point_record.sort_by_key(|(_, score)| *score);
+    data.point_record
+        .sort_by_key(|(_, score)| std::cmp::Reverse(*score));
     let largest_text = data
         .point_record
         .first()
         .map(|(level, points)| format!("Stage: {level}    Points: {points}").len())
         .unwrap_or_default();
 
-    for (i, (level, points)) in data.point_record.iter().enumerate() {
+    for (i, (level, points)) in data.point_record.iter().enumerate().take(15) {
         commands.spawn((
             Leaderboard,
             Text2d::new(format!("Stage: {}    Points: {points}", level + 1)),

@@ -37,41 +37,40 @@ dev = ["bevy/dynamic_linking"]
 
 [dependencies]
 bevy = { version = "0.16", default-features = false, features = [
-  "animation",
-  "bevy_asset",
-  "bevy_color",
-  "bevy_core_pipeline",
-  "bevy_gilrs",
-  "bevy_gizmos",
-  "bevy_gltf",
-  "bevy_log",
-  "bevy_mesh_picking_backend",
-  "bevy_pbr",
-  "bevy_picking",
-  "bevy_render",
-  "bevy_scene",
-  "bevy_sprite",
-  "bevy_sprite_picking_backend",
-  "bevy_state",
-  "bevy_text",
-  "bevy_ui",
-  "bevy_ui_picking_backend",
-  "bevy_window",
-  "bevy_winit",
-  "custom_cursor",
-  "default_font",
-  "hdr",
-  "multi_threaded",
-  "png",
-  "smaa_luts",
-  "sysinfo_plugin",
-  "tonemapping_luts",
-  "webgl2",
-  "x11",
-  "web",
+    "animation",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_core_pipeline",
+    "bevy_gilrs",
+    "bevy_gizmos",
+    "bevy_gltf",
+    "bevy_log",
+    "bevy_mesh_picking_backend",
+    "bevy_pbr",
+    "bevy_picking",
+    "bevy_render",
+    "bevy_scene",
+    "bevy_sprite",
+    "bevy_sprite_picking_backend",
+    "bevy_state",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_ui_picking_backend",
+    "bevy_window",
+    "bevy_winit",
+    "custom_cursor",
+    "default_font",
+    "hdr",
+    "multi_threaded",
+    "png",
+    "smaa_luts",
+    "sysinfo_plugin",
+    "tonemapping_luts",
+    "webgl2",
+    "x11",
+    "web",
 ] }
 bevy_optix = { path = "bevy_optix" }
-bevy_pretty_text = { path = "bevy_pretty_text" }
 # bevy_sequence = { path = "bevy_sequence" }
 bevy_seedling = { path = "bevy_seedling" }
 webbrowser = { version = "1", features = ["hardened"] }
@@ -83,8 +82,8 @@ winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
 ## This greatly improves WGPU's performance due to its heavy use of trace! calls
 log = { version = "0.4", features = [
-  "max_level_debug",
-  "release_max_level_warn",
+    "max_level_debug",
+    "release_max_level_warn",
 ] }
 avian2d = "0.3"
 # avian2d = { git = "https://github.com/Jondolf/avian.git", default-features = false, features = [

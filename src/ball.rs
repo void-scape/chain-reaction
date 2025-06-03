@@ -5,7 +5,7 @@ use bevy_optix::debug::DebugCircle;
 
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
-use crate::state::{GameState, StateAppExt, remove_entities};
+use crate::state::{Playing, StateAppExt, remove_entities};
 use crate::tower::ValidZone;
 
 pub struct BallPlugin;
@@ -15,9 +15,7 @@ impl Plugin for BallPlugin {
         app.add_reset(remove_entities::<With<BallComponents>>)
             .add_systems(
                 Update,
-                (despawn_ball, tower_ball, recharge)
-                    .chain()
-                    .run_if(in_state(GameState::Playing)),
+                (despawn_ball, tower_ball, recharge).chain().in_set(Playing),
             );
     }
 }
@@ -40,7 +38,6 @@ pub struct Ball;
 #[require(
     BallComponents,
     DebugCircle::color(8., YELLOW),
-    //CollisionLayers::new(Layer::TowerBall, [Layer::Default, Layer::TowerZone]),
     ParticleBundle = Self::particles(),
 )]
 pub struct TowerBall;
@@ -69,7 +66,6 @@ fn tower_ball(
     mut commands: Commands,
     input: Res<ButtonInput<KeyCode>>,
     tower_ball: Single<(Entity, &Transform), (With<TowerBall>, With<ValidZone>, Without<Depleted>)>,
-    //mut writer: EventWriter<SpawnTower>,
 ) {
     if input.just_pressed(KeyCode::KeyD) {
         commands
@@ -82,7 +78,6 @@ fn tower_ball(
             )>()
             .despawn_related::<Emitters>()
             .insert((Ball, Depleted));
-        //writer.write(SpawnTower(tower_ball.1.translation.xy()));
     }
 }
 

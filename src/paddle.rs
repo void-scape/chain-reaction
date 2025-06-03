@@ -20,7 +20,7 @@ impl Plugin for PaddlePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PaddleBonk>()
             .add_reset(remove_entities::<With<Paddle>>)
-            .add_systems(OnEnter(GameState::Playing), spawn_paddles)
+            .add_systems(OnEnter(GameState::StartGame), spawn_paddles)
             .add_systems(Avian, paddles.before(PhysicsSet::Prepare))
             .add_observer(apply_pressed)
             .add_observer(apply_released);

@@ -6,13 +6,7 @@ use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
-use grid::{SlotTower, SlotTowerOf, TowerSlot};
 use strum_macros::EnumIter;
-
-#[cfg(debug_assertions)]
-use bevy::window::PrimaryWindow;
-#[cfg(debug_assertions)]
-use bevy_optix::pixel_perfect::OuterCamera;
 
 use crate::ball::{Ball, TowerBall};
 use crate::collectables::PointEvent;
@@ -21,7 +15,7 @@ use crate::{Avian, Layer};
 
 use self::grid::TowerGrid;
 
-mod grid;
+pub mod grid;
 
 pub const TOWER_SIZE: f32 = 36.0;
 pub const TOWER_RADIUS: f32 = TOWER_SIZE / 2.;
@@ -34,7 +28,7 @@ impl Plugin for TowerPlugin {
             remove_entities::<With<Tower>>,
             remove_entities::<With<TowerGrid>>,
         ))
-        .add_systems(OnEnter(GameState::Playing), spawn_tower_zone)
+        .add_systems(OnEnter(GameState::StartGame), spawn_tower_zone)
         .add_systems(
             Update,
             (tower_cooldown::<Dispenser>, grid::TowerGrid::spawn_slots),
@@ -43,8 +37,8 @@ impl Plugin for TowerPlugin {
         .add_observer(bonks)
         .add_observer(bonk_bounce);
 
-        #[cfg(debug_assertions)]
-        app.add_systems(Update, spawn_tower);
+        //#[cfg(debug_assertions)]
+        //app.add_systems(Update, spawn_tower.in_set(Playing));
     }
 }
 
@@ -90,61 +84,61 @@ fn invalidate_balls(
     }
 }
 
-fn spawn_tower(
-    mut commands: Commands,
-    digits: Res<ButtonInput<KeyCode>>,
-    input: Res<ButtonInput<MouseButton>>,
-    window: Single<&Window, With<PrimaryWindow>>,
-    camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
-    slots: Query<(Entity, &GlobalTransform), (With<TowerSlot>, Without<SlotTower>)>,
-
-    mut selection: Local<Tower>,
-) {
-    if digits.just_pressed(KeyCode::Digit1) {
-        *selection = Tower::Bumper;
-    } else if digits.just_pressed(KeyCode::Digit2) {
-        *selection = Tower::Dispenser;
-    }
-
-    let (camera, gt) = camera.into_inner();
-    if !input.just_pressed(MouseButton::Left) {
-        return;
-    }
-
-    let Some(world_position) = window
-        .cursor_position()
-        .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
-        .map(|ray| ray.origin.truncate() / crate::RESOLUTION_SCALE)
-    else {
-        return;
-    };
-
-    // check for the nearest tower slot within some threshold
-
-    let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
-        let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
-        let b = world_position.distance_squared(b.1.compute_transform().translation.xy());
-
-        a.total_cmp(&b)
-    }) else {
-        return;
-    };
-
-    if transform
-        .compute_transform()
-        .translation
-        .xy()
-        .distance(world_position)
-        > 50.0
-    {
-        return;
-    }
-
-    selection.spawn(
-        &mut commands,
-        (SlotTowerOf(nearest_slot), ChildOf(nearest_slot)),
-    );
-}
+//fn spawn_tower(
+//    mut commands: Commands,
+//    digits: Res<ButtonInput<KeyCode>>,
+//    input: Res<ButtonInput<MouseButton>>,
+//    window: Single<&Window, With<PrimaryWindow>>,
+//    camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
+//    slots: Query<(Entity, &GlobalTransform), (With<TowerSlot>, Without<SlotTower>)>,
+//
+//    mut selection: Local<Tower>,
+//) {
+//    if digits.just_pressed(KeyCode::Digit1) {
+//        *selection = Tower::Bumper;
+//    } else if digits.just_pressed(KeyCode::Digit2) {
+//        *selection = Tower::Dispenser;
+//    }
+//
+//    let (camera, gt) = camera.into_inner();
+//    if !input.just_pressed(MouseButton::Left) {
+//        return;
+//    }
+//
+//    let Some(world_position) = window
+//        .cursor_position()
+//        .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
+//        .map(|ray| ray.origin.truncate() / crate::RESOLUTION_SCALE)
+//    else {
+//        return;
+//    };
+//
+//    // check for the nearest tower slot within some threshold
+//
+//    let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
+//        let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
+//        let b = world_position.distance_squared(b.1.compute_transform().translation.xy());
+//
+//        a.total_cmp(&b)
+//    }) else {
+//        return;
+//    };
+//
+//    if transform
+//        .compute_transform()
+//        .translation
+//        .xy()
+//        .distance(world_position)
+//        > 50.0
+//    {
+//        return;
+//    }
+//
+//    selection.spawn(
+//        &mut commands,
+//        (SlotTowerOf(nearest_slot), ChildOf(nearest_slot)),
+//    );
+//}
 
 /// Temporarily disable the effect of a tower collision for a [`Ball`].
 #[derive(Component)]

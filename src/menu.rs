@@ -1,5 +1,5 @@
-use crate::state::GameState;
 use crate::loading::TextureAssets;
+use crate::state::{self, GameState};
 use bevy::prelude::*;
 
 pub struct MenuPlugin;
@@ -7,7 +7,7 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Menu), setup_menu)
-            .add_systems(Update, click_play_button.run_if(in_state(GameState::Menu)))
+            .add_systems(Update, click_play_button.in_set(state::Menu))
             .add_systems(OnExit(GameState::Menu), cleanup_menu);
     }
 }
@@ -58,7 +58,7 @@ fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
                     },
                     BackgroundColor(button_colors.normal),
                     button_colors,
-                    ChangeState(GameState::Playing),
+                    ChangeState(GameState::StartGame),
                 ))
                 .with_child((
                     Text::new("Play"),

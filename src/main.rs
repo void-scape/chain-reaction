@@ -24,6 +24,7 @@ mod loading;
 mod menu;
 mod paddle;
 mod particles;
+mod selection;
 //mod queue;
 mod sampler;
 mod stage;
@@ -56,7 +57,7 @@ fn main() {
                         title: "Bevy game".to_string(),
                         fit_canvas_to_parent: true,
                         resolution: WindowResolution::new(
-                            WIDTH * RESOLUTION_SCALE,
+                            WIDTH * RESOLUTION_SCALE * 1.5,
                             HEIGHT * RESOLUTION_SCALE,
                         ),
                         ..default()
@@ -72,12 +73,11 @@ fn main() {
             avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
             avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
             bevy_optix::pixel_perfect::PixelPerfectPlugin(CanvasDimensions {
-                width: WIDTH as u32,
+                width: (WIDTH * 1.5) as u32,
                 height: HEIGHT as u32,
                 pixel_scale: RESOLUTION_SCALE,
             }),
             bevy_optix::debug::DebugPlugin,
-            bevy_pretty_text::PrettyTextPlugin,
             bevy_enoki::EnokiPlugin,
         ))
         .add_plugins((
@@ -96,6 +96,7 @@ fn main() {
             state::StatePlugin,
             stage::StagePlugin,
             leaderboard::LeaderBoardPlugin,
+            selection::SelectionPlugin,
         ))
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))

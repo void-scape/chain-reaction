@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 
 #[derive(Component)]
+#[require(Transform, Visibility)]
 pub struct TowerGrid {
     pub spacing: Vec2,
 }
