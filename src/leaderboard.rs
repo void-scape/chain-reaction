@@ -29,10 +29,12 @@ struct PlayerData {
 }
 
 fn player_data(mut commands: Commands) {
+    // TODO: Rename
+    let element = "chainreaction1";
     let config_dir = dirs::config_dir()
-        .unwrap_or_else(|| std::env::current_dir().unwrap())
-        // TODO: Rename
-        .join("chainreaction1");
+        .map(|native_config_dir| native_config_dir.join(element))
+        .unwrap_or_else(|| std::path::Path::new("local").join(element));
+
     commands.insert_resource(
         Persistent::<PlayerData>::builder()
             .name("player data")
