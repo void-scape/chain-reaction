@@ -3,17 +3,80 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 
-use crate::state::{self, GameState, StateAppExt, remove_entities};
+use crate::stage::{AdvanceEvent, StageSet};
+use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::tower::Tower;
 use crate::tower::grid::{SlotTower, SlotTowerOf, TowerSlot};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
+pub struct SelectionSet;
 
 pub struct SelectionPlugin;
 
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset(remove_entities::<With<Selection>>)
-            .add_systems(OnEnter(GameState::Selection), spawn_selection)
-            .add_systems(Update, (select_tower, spawn_tower).in_set(state::Selection));
+        app.init_state::<SelectionState>()
+            .add_event::<SelectionEvent>()
+            .add_reset(remove_entities::<With<Selection>>)
+            .add_systems(
+                PreUpdate,
+                (receive_advance, enter)
+                    .chain()
+                    .after(StageSet)
+                    .in_set(SelectionSet),
+            )
+            .add_systems(OnEnter(SelectionState::SpawnSelection), spawn_selection)
+            .add_systems(
+                Update,
+                (select_tower, spawn_tower).run_if(in_state(SelectionState::SelectAndSpawn)),
+            );
+    }
+}
+
+#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
+pub enum SelectionState {
+    SpawnSelection,
+    #[default]
+    SelectAndSpawn,
+}
+
+#[derive(Event)]
+pub struct SelectionEvent {
+    pub packs: Vec<FeaturePack>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Component)]
+pub enum FeaturePack {
+    Starter,
+}
+
+impl FeaturePack {
+    pub fn triple_starter() -> Vec<Self> {
+        vec![Self::Starter; 3]
+    }
+}
+
+#[derive(Component)]
+struct FeaturePacks(Vec<FeaturePack>);
+
+fn receive_advance(mut reader: EventReader<AdvanceEvent>, mut writer: EventWriter<SelectionEvent>) {
+    for event in reader.read() {
+        match event.level {
+            _ => {
+                writer.write(SelectionEvent {
+                    packs: FeaturePack::triple_starter(),
+                });
+            }
+        }
+    }
+}
+
+fn enter(mut commands: Commands, mut reader: EventReader<SelectionEvent>) {
+    for event in reader.read() {
+        debug_assert!(!event.packs.is_empty(), "selection needs atleast 1 pack");
+        commands.set_state(GameState::Selection);
+        commands.set_state(SelectionState::SpawnSelection);
+        commands.spawn(FeaturePacks(event.packs.clone()));
     }
 }
 
@@ -22,7 +85,11 @@ struct Selection;
 
 const SELECTIONZ: f32 = 800.;
 
-fn spawn_selection(mut commands: Commands, _server: Res<AssetServer>) {
+fn spawn_selection(
+    mut commands: Commands,
+    _server: Res<AssetServer>,
+    mut packs: Single<&mut FeaturePacks>,
+) {
     commands.spawn((
         Selection,
         Sprite::from_color(
@@ -42,7 +109,15 @@ fn spawn_selection(mut commands: Commands, _server: Res<AssetServer>) {
     //let mut rng = rand::thread_rng();
     //Sampler::new(&[(Tower::Bumper, 1.), (Tower::Dispenser, 0.5)]).sample(&mut rng);
 
-    let towers = [Tower::Bumper, Tower::Dispenser, Tower::Bumper];
+    let Some(pack) = packs.0.pop() else {
+        debug_assert!(false, "`FeaturePacks` has 0 packs");
+        return;
+    };
+
+    let towers = match pack {
+        FeaturePack::Starter => [Tower::Bumper, Tower::Dispenser, Tower::Bumper],
+    };
+
     let positions = [-300., 0., 300.];
     let y = crate::RES_HEIGHT / 3. - 50.;
 
@@ -76,6 +151,8 @@ fn spawn_selection(mut commands: Commands, _server: Res<AssetServer>) {
             HIGH_RES_LAYER,
         ));
     }
+
+    commands.set_state(SelectionState::SelectAndSpawn);
 }
 
 fn select_tower(
@@ -135,6 +212,8 @@ fn spawn_tower(
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
+
+    packs: Single<(Entity, &FeaturePacks)>,
 ) {
     let (camera, gt) = camera.into_inner();
     if !input.just_pressed(MouseButton::Left) {
@@ -176,5 +255,12 @@ fn spawn_tower(
         (SlotTowerOf(nearest_slot), ChildOf(nearest_slot)),
     );
     commands.entity(entity).despawn();
-    commands.set_state(GameState::Playing);
+
+    let (entity, packs) = packs.into_inner();
+    if packs.0.is_empty() {
+        commands.set_state(GameState::Playing);
+        commands.entity(entity).despawn();
+    } else {
+        commands.set_state(SelectionState::SpawnSelection);
+    }
 }

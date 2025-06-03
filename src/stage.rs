@@ -172,5 +172,4 @@ fn advance(
             .with_volume(Volume::Linear(0.5)),
     );
     points.reset();
-    commands.set_state(GameState::Selection);
 }
