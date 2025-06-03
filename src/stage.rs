@@ -3,7 +3,7 @@ use bevy::sprite::Anchor;
 use bevy_optix::debug::debug_single;
 use bevy_seedling::prelude::*;
 
-use crate::ball::TowerBall;
+use crate::ball::{BallComponents, TowerBall};
 use crate::collectables::Points;
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
 
@@ -104,7 +104,7 @@ fn stage(
     mut commands: Commands,
     server: Res<AssetServer>,
     points: Res<Points>,
-    alive: Query<&TowerBall>,
+    alive: Query<&BallComponents>,
     stage: Single<(Entity, &mut Stage)>,
 ) {
     if alive.is_empty() {
@@ -136,9 +136,12 @@ fn stage(
     }
 }
 
-fn win(_: Trigger<OnAdd, Win>, mut commands: Commands) {
-    info!("you win!");
-    commands.set_state(GameState::Reset);
+fn win(_: Trigger<OnAdd, Win>, mut commands: Commands, server: Res<AssetServer>) {
+    commands.set_state(GameState::Leaderboard);
+    commands.spawn(
+        SamplePlayer::new(server.load("audio/pinball/1JACKPOT.ogg"))
+            .with_volume(Volume::Linear(0.5)),
+    );
 }
 
 fn loose(_: Trigger<OnAdd, Loose>, mut commands: Commands, server: Res<AssetServer>) {

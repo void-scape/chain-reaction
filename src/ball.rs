@@ -28,7 +28,7 @@ impl Plugin for BallPlugin {
     Restitution::new(0.7),
     Collider::circle(8.)
 )]
-struct BallComponents;
+pub struct BallComponents;
 
 #[derive(Component)]
 #[require(BallComponents, DebugCircle::new(8.))]
