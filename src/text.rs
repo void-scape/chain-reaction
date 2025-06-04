@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_optix::pixel_perfect::HIGH_RES_LAYER;
 use bevy_tween::prelude::*;
 use bevy_tween::tween::apply_component_tween_system;
+use rand::Rng;
 
 use crate::tween::{DespawnTweenFinish, linear_velocity};
 
@@ -111,12 +112,56 @@ fn update_text_flash(
     }
 }
 
-pub fn flash_text(
+//pub fn flash_text(
+//    commands: &mut Commands,
+//    _server: &AssetServer,
+//    text: impl Into<String>,
+//    size: f32,
+//    position: Vec3,
+//    color: impl Into<Color>,
+//) {
+//    let text = commands
+//        .spawn((
+//            HIGH_RES_LAYER,
+//            Text2d::new(text.into()),
+//            TextFont {
+//                //font: server.load("fonts/gravity.ttf"),
+//                font_size: size,
+//                ..Default::default()
+//            },
+//            Transform::from_translation(position),
+//            TextFlash::new(0.1, Color::WHITE, color),
+//            RigidBody::Kinematic,
+//            LinearVelocity::default(),
+//        ))
+//        .id();
+//    commands
+//        .entity(text)
+//        .animation()
+//        .insert_tween_here(
+//            Duration::from_secs_f32(0.75),
+//            EaseKind::QuarticIn,
+//            text.into_target()
+//                .with(linear_velocity(Vec2::Y * 20., Vec2::ZERO)),
+//        )
+//        .insert(DespawnTweenFinish);
+//    commands
+//        .animation()
+//        .insert_tween_here(
+//            Duration::from_secs_f32(0.75),
+//            EaseKind::QuarticIn,
+//            text.into_target().with(text_alpha(1., 0.)),
+//        )
+//        .insert(DespawnTweenFinish);
+//}
+
+pub fn flash_text_rotate(
     commands: &mut Commands,
-    _server: &AssetServer,
+    server: &AssetServer,
     text: impl Into<String>,
     size: f32,
     position: Vec3,
+    rotation: f32,
     color: impl Into<Color>,
 ) {
     let text = commands
@@ -124,30 +169,35 @@ pub fn flash_text(
             HIGH_RES_LAYER,
             Text2d::new(text.into()),
             TextFont {
-                //font: server.load("fonts/gravity.ttf"),
+                font: server.load("fonts/cube.ttf"),
                 font_size: size,
                 ..Default::default()
             },
-            Transform::from_translation(position),
+            Transform::from_translation(position).with_rotation(Quat::from_rotation_z(rotation)),
             TextFlash::new(0.1, Color::WHITE, color),
             RigidBody::Kinematic,
             LinearVelocity::default(),
         ))
         .id();
+
+    let dur = 0.75 * 2.;
+
+    let mut rng = rand::thread_rng();
+    let dir = Vec2::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0)).normalize();
     commands
         .entity(text)
         .animation()
         .insert_tween_here(
-            Duration::from_secs_f32(0.75),
+            Duration::from_secs_f32(dur),
             EaseKind::QuarticIn,
             text.into_target()
-                .with(linear_velocity(Vec2::Y * 20., Vec2::ZERO)),
+                .with(linear_velocity(dir * 20., Vec2::ZERO)),
         )
         .insert(DespawnTweenFinish);
     commands
         .animation()
         .insert_tween_here(
-            Duration::from_secs_f32(0.75),
+            Duration::from_secs_f32(dur),
             EaseKind::QuarticIn,
             text.into_target().with(text_alpha(1., 0.)),
         )

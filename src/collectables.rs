@@ -1,14 +1,16 @@
 use crate::RESOLUTION_SCALE;
 use crate::state::{StateAppExt, insert_resource};
-use crate::text::flash_text;
+use crate::text::flash_text_rotate;
 use bevy::prelude::*;
 use bevy_optix::debug::debug_res;
 use bevy_seedling::prelude::*;
+use rand::Rng;
+use std::f32::consts::PI;
 use std::usize;
 
 pub const POINT_COLOR: HexColor = HexColor(0xfff540);
 pub const MONEY_COLOR: HexColor = HexColor(0x00ff00);
-pub const SIZE: f32 = 40.;
+pub const SIZE: f32 = 25.;
 pub const POINT_TEXT_Z: f32 = 500.;
 
 pub struct CollectablePlugin;
@@ -99,26 +101,31 @@ fn effects(
         );
     }
 
+    let mut rng = rand::thread_rng();
+    let rot = PI / 9.;
+
     for event in points.read() {
         total_points.0 += event.points;
-        flash_text(
+        flash_text_rotate(
             &mut commands,
             &server,
             format!("+{}", event.points),
             SIZE,
             (event.position * RESOLUTION_SCALE).extend(POINT_TEXT_Z),
+            rng.gen_range(-rot..rot),
             POINT_COLOR,
         );
     }
 
     for event in money.read() {
         total_money.0 += event.money;
-        flash_text(
+        flash_text_rotate(
             &mut commands,
             &server,
             format!("${}", event.money),
             SIZE,
             (event.position * RESOLUTION_SCALE).extend(POINT_TEXT_Z),
+            rng.gen_range(-rot..rot),
             MONEY_COLOR,
         );
     }

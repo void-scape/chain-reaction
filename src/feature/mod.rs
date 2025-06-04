@@ -189,12 +189,6 @@ pub enum Feature {
 }
 
 impl Feature {
-    //pub fn spawn_random(commands: &mut Commands, rng: &mut impl Rng, bundle: impl Bundle) {
-    //    Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)])
-    //        .sample(rng)
-    //        .spawn(commands, bundle);
-    //}
-
     pub fn spawn(&self, commands: &mut Commands, bundle: impl Bundle) {
         match self {
             Feature::Bumper => {
