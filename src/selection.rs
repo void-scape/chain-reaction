@@ -3,10 +3,10 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 
+use crate::feature::Feature;
+use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, StateAppExt, remove_entities};
-use crate::feature::Feature;
-use crate::feature::grid::{SlotFeature, SlotFeatureOf, FeatureSlot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct SelectionSet;
@@ -116,7 +116,8 @@ fn spawn_selection(
     let sampler = crate::sampler::Sampler::new(&[
         (Feature::Bumper, 1.),
         (Feature::Dispenser, 0.5),
-        (Feature::MoneyBumper, 0.5),
+        (Feature::MoneyBumper, 0.2),
+        (Feature::Splitter, 0.5),
     ]);
 
     let features = match pack {
@@ -148,6 +149,7 @@ fn spawn_selection(
             Feature::Bumper => "Bumps balls",
             Feature::Dispenser => "Dispenses balls",
             Feature::MoneyBumper => "Earn money",
+            Feature::Splitter => "Split balls",
         };
 
         commands.spawn((

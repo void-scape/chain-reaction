@@ -5,10 +5,10 @@ use bevy_optix::debug::DebugCircle;
 use bevy_tween::{BevyTweenRegisterSystems, component_tween_system};
 
 use crate::Layer;
+use crate::feature::ValidZone;
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
 use crate::state::{Playing, StateAppExt, remove_entities};
-use crate::feature::ValidZone;
 
 pub struct BallPlugin;
 
@@ -17,7 +17,9 @@ impl Plugin for BallPlugin {
         app.add_reset(remove_entities::<With<BallComponents>>)
             .add_systems(
                 Update,
-                (despawn_ball, player_ball, recharge).chain().in_set(Playing),
+                (despawn_ball, player_ball, recharge)
+                    .chain()
+                    .in_set(Playing),
             )
             .add_tween_systems(component_tween_system::<PaddleRestMultTween>());
     }
@@ -54,7 +56,7 @@ pub struct PlayerBall;
 impl PlayerBall {
     fn particles() -> ParticleBundle {
         ParticleBundle::from_emitter(
-            ParticleEmitter::from_effect("particles/feature-ball.ron")
+            ParticleEmitter::from_effect("particles/tower-ball.ron")
                 .with(transform(Transform::from_xyz(0., 0., -1.))),
         )
     }
@@ -74,7 +76,10 @@ fn despawn_ball(mut commands: Commands, balls: Query<(Entity, &Transform)>) {
 fn player_ball(
     mut commands: Commands,
     input: Res<ButtonInput<KeyCode>>,
-    feature_ball: Single<(Entity, &Transform), (With<PlayerBall>, With<ValidZone>, Without<Depleted>)>,
+    feature_ball: Single<
+        (Entity, &Transform),
+        (With<PlayerBall>, With<ValidZone>, Without<Depleted>),
+    >,
 ) {
     if input.just_pressed(KeyCode::KeyD) {
         commands
