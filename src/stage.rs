@@ -3,7 +3,7 @@ use bevy::sprite::Anchor;
 use bevy_optix::debug::debug_single;
 use bevy_seedling::prelude::*;
 
-use crate::ball::{BallComponents, TowerBall};
+use crate::ball::{BallComponents, PlayerBall};
 use crate::collectables::Points;
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
 
@@ -113,7 +113,7 @@ fn stage(
         if stage.lives > 0 {
             stage.lives -= 1;
             commands.spawn((
-                TowerBall,
+                PlayerBall,
                 Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.),
             ));
 

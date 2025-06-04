@@ -1,42 +1,44 @@
+use std::f32::consts::PI;
 use std::marker::PhantomData;
 use std::time::Duration;
 
-use avian2d::math::PI;
 use avian2d::prelude::*;
-use bevy::color::palettes::css::{GREEN, PURPLE, RED, YELLOW};
+use bevy::color::palettes::css::{BLUE, GREEN, PURPLE, RED, YELLOW};
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
 use strum_macros::EnumIter;
 
-use crate::ball::{Ball, PaddleRestMult, TowerBall};
+use crate::ball::{Ball, BallComponents, PaddleRestMult, PlayerBall};
 use crate::collectables::{MoneyEvent, PointEvent};
 use crate::sampler::Sampler;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
 
-use self::grid::TowerGrid;
+use self::grid::FeatureGrid;
 
 pub mod grid;
 
 pub const TOWER_SIZE: f32 = 36.0;
 pub const TOWER_RADIUS: f32 = TOWER_SIZE / 2.;
 
-pub struct TowerPlugin;
+pub struct FeaturePlugin;
 
-impl Plugin for TowerPlugin {
+impl Plugin for FeaturePlugin {
     fn build(&self, app: &mut App) {
         app.add_reset((
-            remove_entities::<With<Tower>>,
-            remove_entities::<With<TowerGrid>>,
+            remove_entities::<With<Feature>>,
+            remove_entities::<With<FeatureGrid>>,
         ))
-        .add_systems(OnEnter(GameState::StartGame), spawn_tower_zone)
+        .add_event::<BonksReload>()
+        .add_systems(OnEnter(GameState::StartGame), spawn_feature_zone)
         .add_systems(
             Update,
             (
-                tower_cooldown::<Dispenser>,
-                grid::TowerGrid::spawn_slots,
+                feature_cooldown::<Dispenser>,
+                feature_cooldown::<Splitter>,
+                grid::FeatureGrid::spawn_slots,
                 debug_impulse,
             ),
         )
@@ -45,7 +47,7 @@ impl Plugin for TowerPlugin {
         .add_observer(bonk_bounce);
 
         //#[cfg(debug_assertions)]
-        //app.add_systems(Update, spawn_tower.in_set(Playing));
+        //app.add_systems(Update, spawn_feature.in_set(Playing));
     }
 }
 
@@ -53,28 +55,28 @@ impl Plugin for TowerPlugin {
 #[require(
     RigidBody::Kinematic,
     Collider::rectangle(crate::WIDTH / 1.5, crate::HEIGHT / 1.5),
-    CollisionLayers::new(Layer::TowerZone, Layer::Ball),
+    CollisionLayers::new(Layer::FeatureZone, Layer::Ball),
     CollisionEventsEnabled,
     Sensor,
-    grid::TowerGrid { spacing: Vec2::new(75.0, 75.0), rotation_rads: PI * 0.25 }
+    grid::FeatureGrid { spacing: Vec2::new(75.0, 75.0), rotation_rads: PI * 0.25 }
 )]
-pub struct TowerZone;
+pub struct FeatureZone;
 
-fn spawn_tower_zone(mut commands: Commands) {
+fn spawn_feature_zone(mut commands: Commands) {
     commands
-        .spawn((TowerZone, Transform::from_xyz(0., 50., 0.)))
+        .spawn((FeatureZone, Transform::from_xyz(0., 50., 0.)))
         .observe(validate_balls)
         .observe(invalidate_balls);
 }
 
-/// Marks a [`TowerBall`] as a valid target for constructing a new tower.
+/// Marks a [`PlayerBall`] as a valid target for constructing a new feature.
 #[derive(Component)]
 pub struct ValidZone;
 
 fn validate_balls(
     trigger: Trigger<OnCollisionStart>,
     mut commands: Commands,
-    invalid_balls: Query<Entity, (With<TowerBall>, Without<ValidZone>)>,
+    invalid_balls: Query<Entity, (With<PlayerBall>, Without<ValidZone>)>,
 ) {
     if let Ok(entity) = invalid_balls.get(trigger.collider) {
         commands.entity(entity).insert(ValidZone);
@@ -84,27 +86,27 @@ fn validate_balls(
 fn invalidate_balls(
     trigger: Trigger<OnCollisionEnd>,
     mut commands: Commands,
-    valid_balls: Query<Entity, (With<TowerBall>, With<ValidZone>)>,
+    valid_balls: Query<Entity, (With<PlayerBall>, With<ValidZone>)>,
 ) {
     if let Ok(entity) = valid_balls.get(trigger.collider) {
         commands.entity(entity).remove::<ValidZone>();
     }
 }
 
-//fn spawn_tower(
+//fn spawn_feature(
 //    mut commands: Commands,
 //    digits: Res<ButtonInput<KeyCode>>,
 //    input: Res<ButtonInput<MouseButton>>,
 //    window: Single<&Window, With<PrimaryWindow>>,
 //    camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
-//    slots: Query<(Entity, &GlobalTransform), (With<TowerSlot>, Without<SlotTower>)>,
+//    slots: Query<(Entity, &GlobalTransform), (With<FeatureSlot>, Without<SlotFeature>)>,
 //
-//    mut selection: Local<Tower>,
+//    mut selection: Local<Feature>,
 //) {
 //    if digits.just_pressed(KeyCode::Digit1) {
-//        *selection = Tower::Bumper;
+//        *selection = Feature::Bumper;
 //    } else if digits.just_pressed(KeyCode::Digit2) {
-//        *selection = Tower::Dispenser;
+//        *selection = Feature::Dispenser;
 //    }
 //
 //    let (camera, gt) = camera.into_inner();
@@ -120,7 +122,7 @@ fn invalidate_balls(
 //        return;
 //    };
 //
-//    // check for the nearest tower slot within some threshold
+//    // check for the nearest feature slot within some threshold
 //
 //    let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
 //        let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
@@ -143,100 +145,113 @@ fn invalidate_balls(
 //
 //    selection.spawn(
 //        &mut commands,
-//        (SlotTowerOf(nearest_slot), ChildOf(nearest_slot)),
+//        (SlotFeatureOf(nearest_slot), ChildOf(nearest_slot)),
 //    );
 //}
 
-/// The base amount of points a tower should give.
+/// The base amount of points a feature should give.
 #[derive(Component)]
 pub struct Points(pub usize);
 
-/// Temporarily disable the effect of a tower collision for a [`Ball`].
+/// Temporarily disable the effect of a feature collision for a [`Ball`].
 #[derive(Component)]
-pub struct TowerCooldown<T: 'static> {
+pub struct FeatureCooldown<T: 'static> {
     timer: Timer,
-    _tower: PhantomData<fn() -> T>,
+    _feature: PhantomData<fn() -> T>,
 }
 
-impl<T> TowerCooldown<T> {
+impl<T> FeatureCooldown<T> {
     pub fn from_seconds(duration: f32) -> Self {
         Self {
             timer: Timer::from_seconds(duration, TimerMode::Once),
-            _tower: PhantomData,
+            _feature: PhantomData,
         }
     }
 }
 
-fn tower_cooldown<T>(
+fn feature_cooldown<T>(
     mut commands: Commands,
     time: Res<Time>,
-    mut cooldowns: Query<(Entity, &mut TowerCooldown<T>)>,
+    mut cooldowns: Query<(Entity, &mut FeatureCooldown<T>)>,
 ) {
     for (entity, mut cooldown) in cooldowns.iter_mut() {
         cooldown.timer.tick(time.delta());
         if cooldown.timer.finished() {
-            commands.entity(entity).remove::<TowerCooldown<T>>();
+            commands.entity(entity).remove::<FeatureCooldown<T>>();
         }
     }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, EnumIter, Component)]
 #[require(Bonks::Unlimited, BonkImpulse(1.))]
-pub enum Tower {
+pub enum Feature {
     #[default]
     Bumper,
     MoneyBumper,
     Dispenser,
     Lotto,
+    Splitter,
 }
 
-impl Tower {
-    //pub fn spawn_random(commands: &mut Commands, rng: &mut impl Rng, bundle: impl Bundle) {
-    //    Sampler::new(&[(Self::Bumper, 1.), (Self::Dispenser, 0.5)])
-    //        .sample(rng)
-    //        .spawn(commands, bundle);
-    //}
-
+impl Feature {
     pub fn spawn(&self, commands: &mut Commands, bundle: impl Bundle) {
         match self {
-            Tower::Bumper => {
-                commands.spawn((Bumper, bundle)).observe(tower_bonk);
+            Feature::Bumper => {
+                commands.spawn((Bumper, bundle)).observe(feature_bonk);
             }
-            Tower::MoneyBumper => {
+            Feature::MoneyBumper => {
                 commands
                     .spawn((MoneyBumper, bundle))
                     .observe(kaching)
-                    .observe(tower_bonk);
+                    .observe(feature_bonk);
             }
-            Tower::Dispenser => {
+            Feature::Dispenser => {
                 commands
                     .spawn((Dispenser, bundle))
                     .observe(dispense)
-                    .observe(tower_bonk);
+                    .observe(feature_bonk);
             }
-            Tower::Lotto => {
+            Feature::Splitter => {
+                commands
+                    .spawn((Splitter, bundle))
+                    .observe(splitter)
+                    .observe(feature_bonk);
+            }
+            Feature::Lotto => {
                 commands
                     .spawn((Lotto, bundle))
                     .observe(lotto)
-                    .observe(tower_bonk);
+                    .observe(feature_bonk);
             }
         }
     }
 }
 
-/// The number of bonks before the tower despawns.
+/// The number of bonks before the feature despawns.
 #[derive(Component)]
 #[require(RigidBody::Kinematic, CollisionEventsEnabled)]
 enum Bonks {
     Limited(usize),
+    Reloading { max: usize, current: usize },
     Unlimited,
 }
 
-fn bonks(trigger: Trigger<OnCollisionStart>, mut bonks: Query<&mut Bonks>) {
+fn bonks(
+    trigger: Trigger<OnCollisionStart>,
+    mut bonks: Query<&mut Bonks>,
+    mut writer: EventWriter<BonksReload>,
+) {
     if let Ok(mut bonks) = bonks.get_mut(trigger.target()) {
         match bonks.as_mut() {
             Bonks::Limited(bonks) => {
                 *bonks = bonks.saturating_sub(1);
+            }
+            Bonks::Reloading { max, current } => {
+                *current = current.saturating_sub(1);
+                if *current == 0 {
+                    *current = *max;
+                    writer.write(BonksReload(trigger.target()));
+                }
             }
             _ => {}
         }
@@ -252,24 +267,29 @@ fn despawn_empty_bonks(mut commands: Commands, bonks: Query<(Entity, &Bonks)>) {
     }
 }
 
+/// [`Bonks::Reloading`] reaches 0.
+#[derive(Event)]
+#[allow(unused)]
+struct BonksReload(Entity);
+
 /// The factor applied to the impulse generated by a bonk.
 #[derive(Component)]
 struct BonkImpulse(f32);
 
-fn tower_bonk(
+fn feature_bonk(
     trigger: Trigger<OnCollisionStart>,
     mut commands: Commands,
     mut writer: EventWriter<PointEvent>,
     server: Res<AssetServer>,
-    towers: Query<(&GlobalTransform, &Points, &Tower)>,
+    features: Query<(&GlobalTransform, &Points, &Feature)>,
     collider: Query<Option<&PaddleRestMult>>,
 ) {
-    let Ok((transform, Points(points), tower)) = towers.get(trigger.target()) else {
+    let Ok((transform, Points(points), feature)) = features.get(trigger.target()) else {
         return;
     };
 
-    match tower {
-        Tower::Bumper => {
+    match feature {
+        Feature::Bumper => {
             commands.spawn(
                 SamplePlayer::new(server.load("audio/pinball/1MetalKLANK.ogg"))
                     .with_volume(Volume::Linear(0.4)),
@@ -324,19 +344,19 @@ fn debug_impulse(
 
 fn bonk_bounce(
     trigger: Trigger<OnCollisionStart>,
-    towers: Query<(&GlobalTransform, &BonkImpulse), With<Tower>>,
-    mut balls: Query<(&GlobalTransform, &mut ExternalImpulse), Or<(With<Ball>, With<TowerBall>)>>,
+    features: Query<(&GlobalTransform, &BonkImpulse), With<Feature>>,
+    mut balls: Query<(&GlobalTransform, &mut ExternalImpulse), Or<(With<Ball>, With<PlayerBall>)>>,
     mut commands: Commands,
 ) {
     match (
-        towers.get(trigger.target()),
+        features.get(trigger.target()),
         balls.get_mut(trigger.collider),
     ) {
         (Ok((transform, mult)), Ok((ball_transform, mut bonk))) => {
             let ball_trans = ball_transform.translation().xy();
-            let tower_trans = transform.translation().xy();
+            let feature_trans = transform.translation().xy();
 
-            let impulse = (ball_trans - tower_trans).normalize_or_zero() * 38_000. * mult.0;
+            let impulse = (ball_trans - feature_trans).normalize_or_zero() * 38_000. * mult.0;
             bonk.apply_impulse(impulse);
 
             commands.spawn((
@@ -353,7 +373,7 @@ fn bonk_bounce(
 
 #[derive(Component)]
 #[require(
-    Tower::Bumper,
+    Feature::Bumper,
     Points(20),
     BonkImpulse(2.),
     DebugCircle::color(TOWER_RADIUS, RED),
@@ -363,7 +383,7 @@ pub struct Bumper;
 
 #[derive(Component)]
 #[require(
-    Tower::MoneyBumper,
+    Feature::MoneyBumper,
     Points(0),
     Bonks::Limited(3),
     BonkImpulse(1.25),
@@ -389,7 +409,7 @@ fn kaching(
 
 #[derive(Component)]
 #[require(
-    Tower::Dispenser,
+    Feature::Dispenser,
     Points(10),
     Bonks::Limited(10),
     DebugCircle::color(TOWER_RADIUS, GREEN),
@@ -399,29 +419,29 @@ pub struct Dispenser;
 
 fn dispense(
     trigger: Trigger<OnCollisionStart>,
-    balls: Query<(&GlobalTransform, &LinearVelocity), Or<(With<Ball>, With<TowerBall>)>>,
-    filtered: Query<&TowerCooldown<Dispenser>>,
-    transforms: Query<&GlobalTransform, With<Dispenser>>,
+    balls: Query<(&GlobalTransform, &LinearVelocity), Or<(With<Ball>, With<PlayerBall>)>>,
+    filtered: Query<&FeatureCooldown<Dispenser>>,
+    transforms: Query<&GlobalTransform>,
     mut commands: Commands,
 ) {
     if filtered.contains(trigger.collider) {
         return;
     }
 
-    if let (Ok(tower), Ok((ball, velocity))) = (
+    if let (Ok(feature), Ok((ball, velocity))) = (
         transforms.get(trigger.target()),
         balls.get(trigger.collider),
     ) {
-        let tower = tower.compute_transform();
+        let feature = feature.compute_transform();
         let ball = ball.translation().xy();
 
         let initial_velocity =
-            (tower.translation.xy() - ball).normalize_or_zero() * velocity.0.length();
+            (feature.translation.xy() - ball).normalize_or_zero() * velocity.0.length();
 
         commands.spawn((
             Ball,
-            TowerCooldown::<Dispenser>::from_seconds(0.5),
-            tower,
+            FeatureCooldown::<Dispenser>::from_seconds(0.2),
+            feature,
             LinearVelocity(initial_velocity * 0.75),
         ));
     }
@@ -429,7 +449,7 @@ fn dispense(
 
 #[derive(Component)]
 #[require(
-    Tower::Lotto,
+    Feature::Lotto,
     Points(0),
     Bonks::Unlimited,
     BonkImpulse(1.25),
@@ -454,4 +474,62 @@ fn lotto(
     });
 
     Ok(())
+}
+
+#[derive(Component)]
+#[require(
+    Feature::Splitter,
+    Points(10),
+    DebugCircle::color(TOWER_RADIUS - 2., BLUE),
+    Collider::circle(TOWER_RADIUS - 2.)
+)]
+pub struct Splitter;
+
+fn splitter(
+    trigger: Trigger<OnCollisionStart>,
+    balls: Query<(Entity, &GlobalTransform, &LinearVelocity), With<BallComponents>>,
+    filtered: Query<&FeatureCooldown<Splitter>>,
+    transforms: Query<&GlobalTransform>,
+    mut commands: Commands,
+) {
+    if filtered.contains(trigger.collider) {
+        return;
+    }
+
+    if let (Ok(feature), Ok((entity, ball, velocity))) = (
+        transforms.get(trigger.target()),
+        balls.get(trigger.collider),
+    ) {
+        let feature = feature.compute_transform();
+        let ball = ball.translation().xy();
+
+        commands.entity(entity).despawn();
+
+        let initial_velocity =
+            (feature.translation.xy() - ball).normalize_or_zero() * velocity.0.length();
+
+        let rot = PI / 8.;
+
+        commands.spawn((
+            Ball,
+            FeatureCooldown::<Splitter>::from_seconds(0.2),
+            feature,
+            LinearVelocity(
+                Vec2::from_angle(rot)
+                    .normalize()
+                    .rotate(initial_velocity * 0.75),
+            ),
+        ));
+
+        commands.spawn((
+            Ball,
+            FeatureCooldown::<Splitter>::from_seconds(0.2),
+            feature,
+            LinearVelocity(
+                Vec2::from_angle(-rot)
+                    .normalize()
+                    .rotate(initial_velocity * 0.75),
+            ),
+        ));
+    }
 }
