@@ -4,14 +4,14 @@ use bevy_optix::debug::DebugCircle;
 
 #[derive(Component)]
 #[require(Transform, Visibility)]
-pub struct TowerGrid {
+pub struct FeatureGrid {
     pub spacing: Vec2,
     pub rotation_rads: f32,
 }
 
-impl TowerGrid {
+impl FeatureGrid {
     pub fn spawn_slots(
-        grids: Query<(Entity, &TowerGrid, &Collider), Changed<TowerGrid>>,
+        grids: Query<(Entity, &FeatureGrid, &Collider), Changed<FeatureGrid>>,
         mut commands: Commands,
     ) {
         for (grid_entity, grid, collider) in grids.iter() {
@@ -62,7 +62,7 @@ impl TowerGrid {
                     {
                         commands.spawn((
                             ChildOf(grid_entity),
-                            TowerSlot,
+                            FeatureSlot,
                             DebugCircle::new(4.0),
                             Transform::from_translation(final_pos.extend(0.0)),
                         ));
@@ -74,19 +74,19 @@ impl TowerGrid {
 }
 
 #[derive(Component)]
-pub struct TowerSlot;
+pub struct FeatureSlot;
 
 #[derive(Component)]
-#[relationship(relationship_target = SlotTower)]
-pub struct SlotTowerOf(pub Entity);
+#[relationship(relationship_target = SlotFeature)]
+pub struct SlotFeatureOf(pub Entity);
 
 #[derive(Component)]
-#[relationship_target(relationship = SlotTowerOf, linked_spawn)]
-pub struct SlotTower(Entity);
+#[relationship_target(relationship = SlotFeatureOf, linked_spawn)]
+pub struct SlotFeature(Entity);
 
-impl SlotTower {
+impl SlotFeature {
     #[expect(dead_code)]
-    pub fn tower(&self) -> Entity {
+    pub fn feature(&self) -> Entity {
         self.0
     }
 }

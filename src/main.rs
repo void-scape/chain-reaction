@@ -30,7 +30,7 @@ mod sampler;
 mod stage;
 mod state;
 mod text;
-mod tower;
+mod feature;
 mod tween;
 
 pub const WIDTH: f32 = 550.;
@@ -85,7 +85,7 @@ fn main() {
             menu::MenuPlugin,
             paddle::PaddlePlugin,
             ball::BallPlugin,
-            tower::TowerPlugin,
+            feature::FeaturePlugin,
             //queue::QueuePlugin,
             particles::ParticlePlugin,
             input::InputPlugin,
@@ -133,7 +133,7 @@ pub enum Layer {
     Default,
     Ball,
     Paddle,
-    TowerZone,
+    FeatureZone,
 }
 
 // Sets the icon on windows and X11

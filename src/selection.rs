@@ -5,8 +5,8 @@ use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, StateAppExt, remove_entities};
-use crate::tower::Tower;
-use crate::tower::grid::{SlotTower, SlotTowerOf, TowerSlot};
+use crate::feature::Feature;
+use crate::feature::grid::{SlotFeature, SlotFeatureOf, FeatureSlot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct SelectionSet;
@@ -28,7 +28,7 @@ impl Plugin for SelectionPlugin {
             .add_systems(OnEnter(SelectionState::SpawnSelection), spawn_selection)
             .add_systems(
                 Update,
-                (select_tower, spawn_tower).run_if(in_state(SelectionState::SelectAndSpawn)),
+                (select_feature, spawn_feature).run_if(in_state(SelectionState::SelectAndSpawn)),
             );
     }
 }
@@ -114,20 +114,20 @@ fn spawn_selection(
     };
 
     let sampler = crate::sampler::Sampler::new(&[
-        (Tower::Bumper, 1.),
-        (Tower::Dispenser, 0.5),
-        (Tower::MoneyBumper, 0.5),
+        (Feature::Bumper, 1.),
+        (Feature::Dispenser, 0.5),
+        (Feature::MoneyBumper, 0.5),
     ]);
 
-    let towers = match pack {
+    let features = match pack {
         FeaturePack::Starter => (0..3).map(|_| sampler.sample(&mut rng)).collect::<Vec<_>>(),
     };
 
     let positions = [-300., 0., 300.];
     let y = crate::RES_HEIGHT / 3. - 50.;
 
-    for (tower, x) in towers.into_iter().zip(positions) {
-        tower.spawn(
+    for (feature, x) in features.into_iter().zip(positions) {
+        feature.spawn(
             &mut commands,
             (
                 Selection,
@@ -139,15 +139,15 @@ fn spawn_selection(
 
         commands.spawn((
             Selection,
-            Text2d::new(format!("{tower:?}")),
+            Text2d::new(format!("{feature:?}")),
             Transform::from_xyz(x, y - 40., SELECTIONZ),
             HIGH_RES_LAYER,
         ));
 
-        let desc = match tower {
-            Tower::Bumper => "Bumps balls",
-            Tower::Dispenser => "Dispenses balls",
-            Tower::MoneyBumper => "Earn money",
+        let desc = match feature {
+            Feature::Bumper => "Bumps balls",
+            Feature::Dispenser => "Dispenses balls",
+            Feature::MoneyBumper => "Earn money",
         };
 
         commands.spawn((
@@ -161,9 +161,9 @@ fn spawn_selection(
     commands.set_state(SelectionState::SelectAndSpawn);
 }
 
-fn select_tower(
+fn select_feature(
     mut commands: Commands,
-    options: Query<(&Tower, &GlobalTransform), With<Selection>>,
+    options: Query<(&Feature, &GlobalTransform), With<Selection>>,
 
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -182,9 +182,9 @@ fn select_tower(
         return;
     };
 
-    // check for the nearest tower slot within some threshold
+    // check for the nearest feature slot within some threshold
 
-    let Some((selected_tower, transform)) = options.iter().min_by(|a, b| {
+    let Some((selected_feature, transform)) = options.iter().min_by(|a, b| {
         let a = world_position.distance_squared(a.1.translation().xy());
         let b = world_position.distance_squared(b.1.translation().xy());
 
@@ -203,17 +203,17 @@ fn select_tower(
         return;
     }
 
-    commands.spawn(SelectedTower(*selected_tower));
+    commands.spawn(SelectedFeature(*selected_feature));
     commands.run_system_cached(remove_entities::<With<Selection>>);
 }
 
 #[derive(Component)]
-struct SelectedTower(Tower);
+struct SelectedFeature(Feature);
 
-fn spawn_tower(
+fn spawn_feature(
     mut commands: Commands,
-    slots: Query<(Entity, &GlobalTransform), (With<TowerSlot>, Without<SlotTower>)>,
-    selected_tower: Single<(Entity, &SelectedTower)>,
+    slots: Query<(Entity, &GlobalTransform), (With<FeatureSlot>, Without<SlotFeature>)>,
+    selected_feature: Single<(Entity, &SelectedFeature)>,
 
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -234,7 +234,7 @@ fn spawn_tower(
         return;
     };
 
-    // check for the nearest tower slot within some threshold
+    // check for the nearest feature slot within some threshold
 
     let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
         let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
@@ -255,10 +255,10 @@ fn spawn_tower(
         return;
     }
 
-    let (entity, selected_tower) = selected_tower.into_inner();
-    selected_tower.0.spawn(
+    let (entity, selected_feature) = selected_feature.into_inner();
+    selected_feature.0.spawn(
         &mut commands,
-        (SlotTowerOf(nearest_slot), ChildOf(nearest_slot)),
+        (SlotFeatureOf(nearest_slot), ChildOf(nearest_slot)),
     );
     commands.entity(entity).despawn();
 

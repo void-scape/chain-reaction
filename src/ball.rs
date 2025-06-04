@@ -8,7 +8,7 @@ use crate::Layer;
 use crate::paddle::PaddleBonk;
 use crate::particles::{Emitters, ParticleBundle, ParticleEmitter, transform};
 use crate::state::{Playing, StateAppExt, remove_entities};
-use crate::tower::ValidZone;
+use crate::feature::ValidZone;
 
 pub struct BallPlugin;
 
@@ -17,7 +17,7 @@ impl Plugin for BallPlugin {
         app.add_reset(remove_entities::<With<BallComponents>>)
             .add_systems(
                 Update,
-                (despawn_ball, tower_ball, recharge).chain().in_set(Playing),
+                (despawn_ball, player_ball, recharge).chain().in_set(Playing),
             )
             .add_tween_systems(component_tween_system::<PaddleRestMultTween>());
     }
@@ -49,12 +49,12 @@ pub struct Ball;
     DebugCircle::color(8., YELLOW),
     ParticleBundle = Self::particles(),
 )]
-pub struct TowerBall;
+pub struct PlayerBall;
 
-impl TowerBall {
+impl PlayerBall {
     fn particles() -> ParticleBundle {
         ParticleBundle::from_emitter(
-            ParticleEmitter::from_effect("particles/tower-ball.ron")
+            ParticleEmitter::from_effect("particles/feature-ball.ron")
                 .with(transform(Transform::from_xyz(0., 0., -1.))),
         )
     }
@@ -71,14 +71,14 @@ fn despawn_ball(mut commands: Commands, balls: Query<(Entity, &Transform)>) {
     }
 }
 
-fn tower_ball(
+fn player_ball(
     mut commands: Commands,
     input: Res<ButtonInput<KeyCode>>,
-    tower_ball: Single<(Entity, &Transform), (With<TowerBall>, With<ValidZone>, Without<Depleted>)>,
+    feature_ball: Single<(Entity, &Transform), (With<PlayerBall>, With<ValidZone>, Without<Depleted>)>,
 ) {
     if input.just_pressed(KeyCode::KeyD) {
         commands
-            .entity(tower_ball.0)
+            .entity(feature_ball.0)
             .remove::<(
                 ParticleBundle,
                 DebugCircle,
@@ -93,14 +93,14 @@ fn tower_ball(
 fn recharge(
     mut commands: Commands,
     mut reader: EventReader<PaddleBonk>,
-    depleted: Query<Entity, (With<TowerBall>, With<Depleted>)>,
+    depleted: Query<Entity, (With<PlayerBall>, With<Depleted>)>,
 ) {
     for event in reader.read() {
         if let Ok(entity) = depleted.get(event.0) {
             commands
                 .entity(entity)
                 .remove::<(Depleted, DebugCircle, Mesh2d, MeshMaterial2d<ColorMaterial>)>()
-                .insert(TowerBall);
+                .insert(PlayerBall);
         }
     }
 }

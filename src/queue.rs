@@ -1,28 +1,28 @@
 use bevy::prelude::*;
 
 use crate::state::GameState;
-use crate::tower::{TOWER_SIZE, Tower};
+use crate::feature::{TOWER_SIZE, Feature};
 
 pub struct QueuePlugin;
 
 impl Plugin for QueuePlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SpawnTower>()
+        app.add_event::<SpawnFeature>()
             .add_systems(OnEnter(GameState::Playing), spawn_queue)
-            .add_systems(Update, spawn_tower.run_if(in_state(GameState::Playing)));
+            .add_systems(Update, spawn_feature.run_if(in_state(GameState::Playing)));
     }
 }
 
 #[derive(Component)]
 #[relationship_target(relationship = Queue)]
-struct QueuedTowers(Vec<Entity>);
+struct QueuedFeatures(Vec<Entity>);
 
 #[derive(Component)]
-#[relationship(relationship_target = QueuedTowers)]
+#[relationship(relationship_target = QueuedFeatures)]
 struct Queue(Entity);
 
 #[derive(Component)]
-struct TowerQueue;
+struct FeatureQueue;
 
 fn spawn_queue(mut commands: Commands) {
     let shown = 4;
@@ -30,11 +30,11 @@ fn spawn_queue(mut commands: Commands) {
     let padding = 5.;
     let offset = TOWER_SIZE + padding;
 
-    let id = commands.spawn(TowerQueue).id();
+    let id = commands.spawn(FeatureQueue).id();
 
     let mut rng = rand::thread_rng();
     for i in 0..shown {
-        Tower::spawn_random(
+        Feature::spawn_random(
             &mut commands,
             &mut rng,
             (
@@ -46,20 +46,20 @@ fn spawn_queue(mut commands: Commands) {
 }
 
 #[derive(Event)]
-pub struct SpawnTower(pub Vec2);
+pub struct SpawnFeature(pub Vec2);
 
-fn spawn_tower(
+fn spawn_feature(
     mut commands: Commands,
-    mut reader: EventReader<SpawnTower>,
-    queue: Single<(Entity, &QueuedTowers), With<TowerQueue>>,
-    mut towers: Query<(Entity, &mut Transform), With<Queue>>,
+    mut reader: EventReader<SpawnFeature>,
+    queue: Single<(Entity, &QueuedFeatures), With<FeatureQueue>>,
+    mut features: Query<(Entity, &mut Transform), With<Queue>>,
 ) {
     let (queue, queued) = queue.into_inner();
     for event in reader.read() {
         let padding = 5.;
         let offset = TOWER_SIZE + padding;
 
-        for (_, mut transform) in towers.iter_mut() {
+        for (_, mut transform) in features.iter_mut() {
             transform.translation.y += offset;
         }
 
@@ -67,7 +67,7 @@ fn spawn_tower(
             .0
             .iter()
             .map(|entity| {
-                towers
+                features
                     .get(*entity)
                     .map(|(_, t)| (*entity, t.translation.y))
                     .unwrap()
@@ -82,14 +82,14 @@ fn spawn_tower(
             .insert(Transform::from_translation(event.0.extend(0.)));
 
         let mut rng = rand::thread_rng();
-        Tower::spawn_random(
+        Feature::spawn_random(
             &mut commands,
             &mut rng,
             (
                 Queue(queue),
                 Transform::from_xyz(
                     crate::WIDTH / 2. - 20.,
-                    (towers.iter().count() as f32 - 1.) * -offset,
+                    (features.iter().count() as f32 - 1.) * -offset,
                     0.,
                 ),
             ),
