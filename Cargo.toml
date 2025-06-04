@@ -69,6 +69,7 @@ bevy = { version = "0.16", default-features = false, features = [
     "webgl2",
     "x11",
     "web",
+    "reflect_documentation",
 ] }
 bevy_optix = { path = "bevy_optix" }
 # bevy_sequence = { path = "bevy_sequence" }

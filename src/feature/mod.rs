@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use avian2d::prelude::*;
-use bevy::color::palettes::css::{BLUE, GREEN, PURPLE, RED, YELLOW};
+use bevy::color::palettes::css::{BLUE, GREEN, MAROON, PURPLE, RED, YELLOW};
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
@@ -43,6 +43,7 @@ impl Plugin for FeaturePlugin {
             ),
         )
         .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
+        .add_systems(OnEnter(GameState::Selection), reset_bouncers)
         .add_observer(bonks)
         .add_observer(bonk_bounce);
 
@@ -191,6 +192,7 @@ pub enum Feature {
     Dispenser,
     Lotto,
     Splitter,
+    Bouncer,
 }
 
 impl Feature {
@@ -221,6 +223,12 @@ impl Feature {
                 commands
                     .spawn((Lotto, bundle))
                     .observe(lotto)
+                    .observe(feature_bonk);
+            }
+            Feature::Bouncer => {
+                commands
+                    .spawn((Bouncer::default(), bundle))
+                    .observe(bouncer)
                     .observe(feature_bonk);
             }
         }
@@ -531,5 +539,39 @@ fn splitter(
                     .rotate(initial_velocity * 0.75),
             ),
         ));
+    }
+}
+
+/// Every second, gain $2 for every ball on the screen.
+#[derive(Component, Reflect)]
+#[require(
+    Feature::Bouncer,
+    DebugCircle::color(TOWER_RADIUS - 2., MAROON),
+    Collider::circle(TOWER_RADIUS - 2.)
+)]
+pub struct Bouncer(f32);
+
+impl Default for Bouncer {
+    fn default() -> Self {
+        Self(2.)
+    }
+}
+
+fn bouncer(
+    trigger: Trigger<OnCollisionStart>,
+    balls: Query<&BallComponents>,
+    mut bouncers: Query<&mut Bouncer>,
+) {
+    if let (Ok(mut bouncer), Ok(_)) = (
+        bouncers.get_mut(trigger.target()),
+        balls.get(trigger.collider),
+    ) {
+        bouncer.0 /= 2.;
+    }
+}
+
+fn reset_bouncers(mut bouncers: Query<&mut Bouncer>) {
+    for mut bouncer in bouncers.iter_mut() {
+        *bouncer = Bouncer::default();
     }
 }
