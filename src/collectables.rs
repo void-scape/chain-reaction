@@ -8,6 +8,7 @@ use std::usize;
 
 pub const POINT_COLOR: HexColor = HexColor(0xfff540);
 pub const MONEY_COLOR: HexColor = HexColor(0x00ff00);
+pub const MONEY_COLOR_REMOVE: HexColor = HexColor(0xff1100);
 pub const SIZE: f32 = 40.;
 pub const POINT_TEXT_Z: f32 = 500.;
 
@@ -77,11 +78,11 @@ pub struct PointEvent {
 }
 
 #[derive(Debug, Clone, Resource)]
-pub struct Money(usize);
+pub struct Money(i32);
 
 #[derive(Event)]
 pub struct MoneyEvent {
-    pub money: usize,
+    pub money: i32,
     pub position: Vec2,
 }
 
@@ -113,13 +114,20 @@ fn effects(
 
     for event in money.read() {
         total_money.0 += event.money;
+
+        let color = if event.money >= 0 {
+            MONEY_COLOR
+        } else {
+            MONEY_COLOR_REMOVE
+        };
+
         flash_text(
             &mut commands,
             &server,
             format!("${}", event.money),
             SIZE,
             (event.position * RESOLUTION_SCALE).extend(POINT_TEXT_Z),
-            MONEY_COLOR,
+            color,
         );
     }
 }

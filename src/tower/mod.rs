@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use avian2d::math::PI;
 use avian2d::prelude::*;
-use bevy::color::palettes::css::{GREEN, RED, YELLOW};
+use bevy::color::palettes::css::{GREEN, PURPLE, RED, YELLOW};
 use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
@@ -12,6 +12,7 @@ use strum_macros::EnumIter;
 
 use crate::ball::{Ball, PaddleRestMult, TowerBall};
 use crate::collectables::{MoneyEvent, PointEvent};
+use crate::sampler::Sampler;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
 
@@ -186,6 +187,7 @@ pub enum Tower {
     Bumper,
     MoneyBumper,
     Dispenser,
+    Lotto,
 }
 
 impl Tower {
@@ -210,6 +212,12 @@ impl Tower {
                 commands
                     .spawn((Dispenser, bundle))
                     .observe(dispense)
+                    .observe(tower_bonk);
+            }
+            Tower::Lotto => {
+                commands
+                    .spawn((Lotto, bundle))
+                    .observe(lotto)
                     .observe(tower_bonk);
             }
         }
@@ -358,7 +366,7 @@ pub struct Bumper;
     Tower::MoneyBumper,
     Points(0),
     Bonks::Limited(3),
-    BonkImpulse(1.5),
+    BonkImpulse(1.25),
     DebugCircle::color(TOWER_RADIUS * 0.666, YELLOW),
     Collider::circle(TOWER_RADIUS * 0.666)
 )]
@@ -417,4 +425,33 @@ fn dispense(
             LinearVelocity(initial_velocity * 0.75),
         ));
     }
+}
+
+#[derive(Component)]
+#[require(
+    Tower::Lotto,
+    Points(0),
+    Bonks::Unlimited,
+    BonkImpulse(1.25),
+    DebugCircle::color(TOWER_RADIUS, PURPLE),
+    Collider::circle(TOWER_RADIUS)
+)]
+pub struct Lotto;
+
+fn lotto(
+    trigger: Trigger<OnCollisionStart>,
+    transforms: Query<&GlobalTransform, With<Lotto>>,
+    mut event_writer: EventWriter<MoneyEvent>,
+) -> Result {
+    let transform = transforms.get(trigger.target())?;
+
+    let mut rng = rand::thread_rng();
+    let probability = Sampler::new(&[(-1, 4.0), (7, 1.0)]);
+
+    event_writer.write(MoneyEvent {
+        money: probability.sample(&mut rng),
+        position: transform.translation().xy(),
+    });
+
+    Ok(())
 }

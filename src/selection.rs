@@ -116,7 +116,8 @@ fn spawn_selection(
     let sampler = crate::sampler::Sampler::new(&[
         (Tower::Bumper, 1.),
         (Tower::Dispenser, 0.5),
-        (Tower::MoneyBumper, 0.5),
+        (Tower::MoneyBumper, 0.1),
+        (Tower::Lotto, 0.3),
     ]);
 
     let towers = match pack {
@@ -148,6 +149,7 @@ fn spawn_selection(
             Tower::Bumper => "Bumps balls",
             Tower::Dispenser => "Dispenses balls",
             Tower::MoneyBumper => "Earn money",
+            Tower::Lotto => "Play the lottery",
         };
 
         commands.spawn((

@@ -102,13 +102,27 @@ fn main() {
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);
 
+    use bevy_seedling::prelude::*;
     #[cfg(target_arch = "wasm32")]
     app.add_plugins(
         bevy_seedling::SeedlingPlugin::<firewheel_web_audio::WebAudioBackend> {
-            config: Default::default(),
-            stream_config: Default::default(),
+            config: FirewheelConfig {
+                num_graph_inputs: ChannelCount::STEREO,
+                ..Default::default()
+            },
+            stream_config: firewheel_web_audio::WebAudioConfig {
+                request_input: true,
+                sample_rate: None,
+            },
             spawn_default_pool: true,
             pool_size: 4..=32,
+        },
+    )
+    .add_systems(
+        Startup,
+        |input: Single<Entity, With<bevy_seedling::edge::AudioGraphInput>>,
+         mut commands: Commands| {
+            commands.entity(*input).connect(MainBus);
         },
     );
 
