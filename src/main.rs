@@ -26,11 +26,11 @@ mod paddle;
 mod particles;
 mod selection;
 //mod queue;
+mod feature;
 mod sampler;
 mod stage;
 mod state;
 mod text;
-mod feature;
 mod tween;
 
 pub const WIDTH: f32 = 550.;
@@ -102,6 +102,7 @@ fn main() {
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);
 
+    #[cfg(target_arch = "wasm32")]
     use bevy_seedling::prelude::*;
     #[cfg(target_arch = "wasm32")]
     app.add_plugins(
