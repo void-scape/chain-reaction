@@ -10,7 +10,6 @@ use avian2d::prelude::PhysicsSet;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use self::features::{Dispenser, Splitter, reset_bouncers, spawn_feature_list};
 use self::grid::FeatureGrid;
 
 mod features;
@@ -22,35 +21,18 @@ pub struct FeaturePlugin;
 
 impl Plugin for FeaturePlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset((
-            remove_entities::<With<Feature>>,
-            remove_entities::<With<FeatureGrid>>,
-        ))
-        .add_event::<BonksReload>()
-        .add_systems(
-            OnEnter(GameState::StartGame),
-            (spawn_feature_zone, spawn_feature_list),
-        )
-        .add_systems(
-            Update,
-            (
-                feature_cooldown::<Dispenser>,
-                feature_cooldown::<Splitter>,
-                grid::FeatureGrid::spawn_slots,
-                debug_impulse,
-            ),
-        )
-        .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
-        .add_systems(OnEnter(GameState::Selection), reset_bouncers)
-        .add_observer(bonks)
-        .add_observer(bonk_bounce)
-        .add_observer(feature_bonk)
-        .add_observer(bumper)
-        .add_observer(kaching)
-        .add_observer(dispense)
-        .add_observer(splitter)
-        .add_observer(lotto)
-        .add_observer(bouncer);
+        app.add_plugins(FeaturesPlugin)
+            .add_reset((
+                remove_entities::<With<Feature>>,
+                remove_entities::<With<FeatureGrid>>,
+            ))
+            .add_event::<BonksReload>()
+            .add_systems(OnEnter(GameState::StartGame), spawn_feature_zone)
+            .add_systems(Update, (grid::FeatureGrid::spawn_slots, debug_impulse))
+            .add_systems(Avian, despawn_empty_bonks.before(PhysicsSet::Prepare))
+            .add_observer(bonks)
+            .add_observer(bonk_bounce)
+            .add_observer(feature_bonk);
 
         //#[cfg(debug_assertions)]
         //app.add_systems(Update, spawn_feature.in_set(Playing));

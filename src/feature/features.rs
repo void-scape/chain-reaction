@@ -12,14 +12,34 @@ use bevy_seedling::sample::SamplePlayer;
 use crate::ball::{Ball, BallComponents, PlayerBall};
 use crate::collectables::MoneyEvent;
 use crate::sampler::Sampler;
+use crate::state::GameState;
 
-use super::{BonkImpulse, Bonks, FeatureCooldown, Points};
+use super::{BonkImpulse, Bonks, FeatureCooldown, Points, feature_cooldown};
 
 pub const FEATURE_SIZE: f32 = 36.0;
 pub const FEATURE_RADIUS: f32 = FEATURE_SIZE / 2.;
 
+pub struct FeaturesPlugin;
+
+impl Plugin for FeaturesPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(GameState::StartGame), spawn_feature_list)
+            .add_systems(
+                Update,
+                (feature_cooldown::<Dispenser>, feature_cooldown::<Splitter>),
+            )
+            .add_systems(OnEnter(GameState::Selection), reset_bouncers)
+            .add_observer(bumper)
+            .add_observer(kaching)
+            .add_observer(dispense)
+            .add_observer(splitter)
+            .add_observer(lotto)
+            .add_observer(bouncer);
+    }
+}
+
 #[derive(Default, Clone, Component)]
-#[require(Bonks::Unlimited, BonkImpulse(1.), Points(0))]
+#[require(Bonks::Unlimited, BonkImpulse(1.), Points(0), CollisionEventsEnabled)]
 pub struct Feature;
 
 #[derive(Component)]
@@ -57,7 +77,7 @@ fn spawn_feature<T: Default + Component + Typed>(feature: &mut EntityCommands) {
 }
 
 /// Gives balls impulses when bonked.
-#[derive(Default, Component, Reflect)]
+#[derive(Default, Clone, Component, Reflect)]
 #[require(
     Feature,
     Points(20),

@@ -37,7 +37,7 @@ crate::float_tween_wrapper!(PaddleRestMult, paddle_mult, PaddleRestMultTween);
     AngularDamping(0.3),
     Restitution::new(0.7),
     Collider::circle(8.),
-    CollisionLayers::new(Layer::Ball, [Layer::Default, Layer::Paddle])
+    CollisionLayers::new(Layer::Ball, [Layer::Default, Layer::Paddle]),
 )]
 pub struct BallComponents;
 
