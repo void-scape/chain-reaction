@@ -98,6 +98,12 @@ fn main() {
             leaderboard::LeaderBoardPlugin,
             selection::SelectionPlugin,
         ))
+        .add_plugins((
+            bevy_egui::EguiPlugin {
+                enable_multipass_for_primary_context: true,
+            },
+            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+        ))
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
         .add_systems(Startup, set_window_icon);

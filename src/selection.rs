@@ -6,7 +6,7 @@ use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 use convert_case::{Case, Casing};
 
 use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
-use crate::feature::{Feature, Prob, Tooltips};
+use crate::feature::{Feature, FeatureSpawner, Prob, Tooltips};
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, StateAppExt, remove_entities};
 
@@ -33,7 +33,8 @@ impl Plugin for SelectionPlugin {
                 (spawn_feature, select_feature)
                     .chain()
                     .run_if(in_state(SelectionState::SelectAndSpawn)),
-            );
+            )
+            .add_systems(Update, report_entities);
     }
 }
 
@@ -89,12 +90,24 @@ struct Selection;
 
 const SELECTIONZ: f32 = 800.;
 
+#[derive(Component, Clone)]
+struct EntityReporter(String);
+
+fn report_entities(q: Query<(Entity, &EntityReporter)>, mut commands: Commands) {
+    for (entity, reporter) in q.iter() {
+        info!("logging {} coponents", reporter.0);
+        commands
+            .entity(entity)
+            .log_components()
+            .remove::<EntityReporter>();
+    }
+}
+
 fn spawn_selection(
     mut commands: Commands,
     _server: Res<AssetServer>,
     mut packs: Single<&mut FeaturePacks>,
-
-    features: Query<(Entity, &Tooltips, &Prob), With<Disabled>>,
+    features: Query<(Entity, &Tooltips, &Prob, &FeatureSpawner)>,
 ) {
     commands.spawn((
         Selection,
@@ -121,7 +134,7 @@ fn spawn_selection(
 
     let samples = features
         .iter()
-        .map(|(entity, tips, prob)| ((entity, tips), prob.0))
+        .map(|(entity, tips, prob, spawner)| ((entity, tips, spawner), prob.0))
         .collect::<Vec<_>>();
     let sampler = crate::sampler::Sampler::new(&samples);
 
@@ -132,17 +145,25 @@ fn spawn_selection(
     let positions = [-300., 0., 300.];
     let y = crate::RES_HEIGHT / 3. - 50.;
 
-    for ((entity, tips), x) in features.into_iter().zip(positions) {
-        commands
-            .entity(entity)
-            .clone_and_spawn_with(|config| {
-                config.allow_all().deny::<Disabled>().linked_cloning(true);
-            })
-            .insert((
-                Selection,
-                ColliderDisabled,
-                Transform::from_xyz(x, y, SELECTIONZ),
-            ));
+    for ((entity, tips, spawner), x) in features.into_iter().zip(positions) {
+        let mut selection = commands.spawn((
+            spawner.clone(),
+            Selection,
+            ColliderDisabled,
+            Transform::from_xyz(x, y, SELECTIONZ),
+        ));
+        spawner.0(&mut selection);
+
+        // commands
+        //     .entity(entity)
+        //     .clone_and_spawn_with(|config| {
+        //         config.allow_all().deny::<Disabled>().linked_cloning(true);
+        //     })
+        //     .insert((
+        //         Selection,
+        //         ColliderDisabled,
+        //         Transform::from_xyz(x, y, SELECTIONZ),
+        //     ));
 
         commands.spawn((
             Selection,
@@ -164,7 +185,7 @@ fn spawn_selection(
 
 fn select_feature(
     mut commands: Commands,
-    options: Query<(Entity, &GlobalTransform), (With<Selection>, With<Feature>)>,
+    options: Query<(Entity, &FeatureSpawner, &GlobalTransform), (With<Selection>, With<Feature>)>,
 
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -187,9 +208,9 @@ fn select_feature(
 
     // check for the nearest feature slot within some threshold
 
-    let Some((selected_feature, transform)) = options.iter().min_by(|a, b| {
-        let a = world_position.distance_squared(a.1.translation().xy());
-        let b = world_position.distance_squared(b.1.translation().xy());
+    let Some((_, selected_feature, transform)) = options.iter().min_by(|a, b| {
+        let a = world_position.distance_squared(a.2.translation().xy());
+        let b = world_position.distance_squared(b.2.translation().xy());
 
         a.total_cmp(&b)
     }) else {
@@ -206,7 +227,7 @@ fn select_feature(
         return;
     }
 
-    commands.spawn(SelectedFeature(selected_feature));
+    commands.spawn(SelectedFeature(selected_feature.clone()));
     for entity in selection_entities.iter() {
         commands
             .entity(entity)
@@ -215,7 +236,7 @@ fn select_feature(
 }
 
 #[derive(Component)]
-struct SelectedFeature(Entity);
+struct SelectedFeature(FeatureSpawner);
 
 fn spawn_feature(
     mut commands: Commands,
@@ -263,15 +284,21 @@ fn spawn_feature(
     }
 
     let (entity, selected_feature) = selected_feature.into_inner();
-    commands
-        .entity(selected_feature.0)
-        .remove_recursive::<Children, Disabled>()
-        .remove::<(Selection, ColliderDisabled)>()
-        .insert((
-            SlotFeatureOf(nearest_slot),
-            ChildOf(nearest_slot),
-            Transform::default(),
-        ));
+    let mut entity_commands = commands.spawn((
+        SlotFeatureOf(nearest_slot),
+        ChildOf(nearest_slot),
+        Transform::default(),
+    ));
+    selected_feature.0.0(&mut entity_commands);
+    // commands
+    //     .entity(selected_feature.0)
+    //     .remove_recursive::<Children, Disabled>()
+    //     .remove::<(Selection, ColliderDisabled)>()
+    //     .insert((
+    //         SlotFeatureOf(nearest_slot),
+    //         ChildOf(nearest_slot),
+    //         Transform::default(),
+    //     ));
     commands.entity(entity).despawn();
     commands.run_system_cached(
         remove_entities::<(With<Selection>, Or<(With<Disabled>, Without<Disabled>)>)>,

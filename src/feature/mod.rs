@@ -46,7 +46,8 @@ impl Plugin for FeaturePlugin {
     CollisionLayers::new(Layer::FeatureZone, Layer::Ball),
     CollisionEventsEnabled,
     Sensor,
-    grid::FeatureGrid { spacing: Vec2::new(75.0, 75.0), rotation_rads: PI * 0.25 }
+    grid::FeatureGrid { spacing: Vec2::new(75.0, 75.0), rotation_rads: PI * 0.25 },
+    Name::new("Feature zone"),
 )]
 pub struct FeatureZone;
 

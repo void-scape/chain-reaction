@@ -1,8 +1,10 @@
 use std::f32::consts::PI;
+use std::sync::Arc;
 
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{BLUE, GREEN, MAROON, PURPLE, RED, YELLOW};
-use bevy::ecs::entity_disabling::Disabled;
+use bevy::ecs::component::HookContext;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use bevy::reflect::Typed;
 use bevy_optix::debug::DebugCircle;
@@ -45,11 +47,24 @@ pub struct Feature;
 #[derive(Component)]
 pub struct Prob(pub f32);
 
+#[derive(Component, Clone)]
+pub struct FeatureSpawner(pub Arc<dyn Fn(&mut EntityCommands) + Send + Sync>);
+
 #[derive(Default, Component)]
 #[require(Feature, Transform, Visibility::Visible)]
+#[component(on_insert = Self::on_insert_hook)]
 pub struct Tooltips {
     pub name: &'static str,
     pub desc: &'static str,
+}
+
+impl Tooltips {
+    fn on_insert_hook(mut world: DeferredWorld, ctx: HookContext) {
+        let entity = world.get::<Tooltips>(ctx.entity).unwrap();
+        let name = entity.name;
+
+        world.commands().entity(ctx.entity).insert(Name::new(name));
+    }
 }
 
 impl Tooltips {
@@ -73,7 +88,12 @@ pub fn spawn_feature_list(mut commands: Commands) {
 }
 
 fn spawn_feature<T: Default + Component + Typed>(feature: &mut EntityCommands) {
-    feature.insert((T::default(), Tooltips::new::<T>(), Disabled));
+    feature.insert((
+        FeatureSpawner(Arc::new(|commands: &mut EntityCommands| {
+            commands.insert(T::default());
+        })),
+        Tooltips::new::<T>(),
+    ));
 }
 
 /// Gives balls impulses when bonked.
@@ -104,7 +124,7 @@ pub fn bumper(
 }
 
 /// Produce $1 when bonked.
-#[derive(Default, Component, Reflect)]
+#[derive(Default, Component, Reflect, Clone)]
 #[require(
     Feature,
     Points(0),
@@ -131,7 +151,7 @@ pub fn kaching(
 }
 
 /// Produce 1 new ball.
-#[derive(Default, Component, Reflect)]
+#[derive(Default, Component, Reflect, Clone)]
 #[require(
     Feature,
     Points(10),
@@ -172,7 +192,7 @@ pub fn dispense(
 }
 
 /// Loose $1 when bonked. Every bonk has a 1 in 5 chance to produce $7.
-#[derive(Default, Component, Reflect)]
+#[derive(Default, Component, Reflect, Clone)]
 #[require(
     Feature,
     BonkImpulse(1.25),
@@ -200,7 +220,7 @@ pub fn lotto(
 }
 
 /// Consumes ball, produces two new balls.
-#[derive(Default, Component, Reflect)]
+#[derive(Default, Component, Reflect, Clone)]
 #[require(
     Feature,
     Points(10),
@@ -259,7 +279,7 @@ pub fn splitter(
 }
 
 /// Every second, gain $2 for every ball on the screen.
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Clone)]
 #[require(
     Feature,
     DebugCircle::color(FEATURE_RADIUS - 2., MAROON),
