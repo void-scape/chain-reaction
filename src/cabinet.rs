@@ -1,8 +1,20 @@
 use avian2d::prelude::*;
 use bevy::color::palettes::css::GREY;
+use bevy::core_pipeline::bloom::Bloom;
 use bevy::prelude::*;
+use bevy_light_2d::light::{AmbientLight2d, PointLight2d};
+use bevy_optix::camera::MainCamera;
 use bevy_optix::debug::DebugRect;
+use bevy_optix::post_process::PostProcessCommand;
+use bevy_tween::prelude::{AnimationBuilderExt, EaseKind, Repeat};
+use bevy_tween::tween::IntoTarget;
+use bevy_tween::{BevyTweenRegisterSystems, component_tween_system};
 use std::f32::consts::PI;
+use std::time::Duration;
+
+use crate::collectables::HexColor;
+use crate::float_tween_wrapper;
+use crate::state::GameState;
 
 pub const CABZ: f32 = -100.;
 
@@ -10,9 +22,27 @@ pub struct CabinetPlugin;
 
 impl Plugin for CabinetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_edges)
-            .add_systems(Update, make_colliders);
+        app.insert_resource(ClearColor(HexColor(0x2b0f54).into()))
+            .add_systems(Startup, spawn_edges)
+            .add_systems(OnEnter(GameState::StartGame), lighting)
+            .add_systems(Update, make_colliders)
+            .add_tween_systems(component_tween_system::<PointLightIntensity>());
     }
+}
+
+float_tween_wrapper!(
+    PointLight2d,
+    point_light_intensity,
+    PointLightIntensity,
+    intensity
+);
+
+fn lighting(mut commands: Commands) {
+    commands.post_process::<MainCamera>(Bloom::NATURAL);
+    commands.post_process::<MainCamera>(AmbientLight2d {
+        brightness: 0.1,
+        ..Default::default()
+    });
 }
 
 #[derive(Component)]
@@ -110,6 +140,19 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         Collider::rectangle(h, hh),
     ));
 
+    spawn_light(
+        &mut commands,
+        Vec2::new(-x, 0.),
+        PI / 4.,
+        HexColor(0xc53a9d),
+    );
+    spawn_light(
+        &mut commands,
+        Vec2::new(x, 0.),
+        -PI / 4. + PI,
+        HexColor(0x4a2480),
+    );
+
     commands.spawn((
         RigidBody::Static,
         Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
@@ -121,4 +164,55 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
     //     CabinetMesh(server.load("meshes/square.gltf")),
     //     Transform::from_xyz(0., crate::HEIGHT * 0.33, CABZ),
     // ));
+}
+
+fn spawn_light(commands: &mut Commands, position: Vec2, rotation: f32, color: impl Into<Color>) {
+    let entity = commands
+        .spawn((
+            PointLight2d {
+                intensity: 10.0,
+                radius: 1000.,
+                cast_shadows: true,
+                color: color.into(),
+                ..Default::default()
+            },
+            //Transform::from_xyz(position.x, position.y, 0.)
+            //    .with_rotation(Quat::from_rotation_z(rotation)),
+            //children![
+            //    (
+            //        LightOccluder2d {
+            //            shape: LightOccluder2dShape::Rectangle {
+            //                half_size: Vec2::splat(10.),
+            //            },
+            //        },
+            //        Transform::from_xyz(-4., -12., 0.),
+            //    ),
+            //    (
+            //        LightOccluder2d {
+            //            shape: LightOccluder2dShape::Rectangle {
+            //                half_size: Vec2::splat(10.),
+            //            },
+            //        },
+            //        Transform::from_xyz(-4., 12., 0.),
+            //    )
+            //],
+        ))
+        .id();
+
+    commands
+        .entity(entity)
+        .animation()
+        .repeat(Repeat::Infinitely)
+        .repeat_style(bevy_tween::prelude::RepeatStyle::PingPong)
+        .insert_tween_here(
+            Duration::from_secs_f32(1.),
+            EaseKind::SineInOut,
+            entity.into_target().with(
+                //    rotation(
+                //    Quat::from_rotation_z(-PI / 8. + PI),
+                //    Quat::from_rotation_z(PI / 8. + PI),
+                //)
+                point_light_intensity(10., 8.),
+            ),
+        );
 }

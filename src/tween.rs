@@ -175,6 +175,32 @@ macro_rules! float_tween_wrapper {
             }
         }
     };
+
+    ($name:ident, $func:ident, $tween:ident, $field:ident) => {
+        pub fn $func(start: f32, end: f32) -> $tween {
+            $tween::new(start, end)
+        }
+
+        #[derive(Component)]
+        pub struct $tween {
+            start: f32,
+            end: f32,
+        }
+
+        impl $tween {
+            pub fn new(start: f32, end: f32) -> Self {
+                Self { start, end }
+            }
+        }
+
+        impl bevy_tween::prelude::Interpolator for $tween {
+            type Item = $name;
+
+            fn interpolate(&self, item: &mut Self::Item, value: f32) {
+                item.$field = self.start.lerp(self.end, value);
+            }
+        }
+    };
 }
 
 pub fn linear_velocity(start: Vec2, end: Vec2) -> InterpolateLinearVelocity {

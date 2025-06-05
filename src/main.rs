@@ -67,7 +67,8 @@ fn main() {
                 .set(AssetPlugin {
                     meta_check: AssetMetaCheck::Never,
                     ..default()
-                }),
+                })
+                .set(ImagePlugin::default_nearest()),
             bevy_tween::DefaultTweenPlugins,
             bevy_enhanced_input::EnhancedInputPlugin,
             avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
@@ -79,6 +80,7 @@ fn main() {
             }),
             bevy_optix::debug::DebugPlugin,
             bevy_enoki::EnokiPlugin,
+            bevy_light_2d::prelude::Light2dPlugin,
         ))
         .add_plugins((
             loading::LoadingPlugin,
