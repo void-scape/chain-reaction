@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 use std::marker::PhantomData;
 use std::time::Duration;
 
-use crate::ball::{Ball, PaddleRestMult, PlayerBall};
+use crate::ball::{Ball, BallComponents, PaddleRestMult, PlayerBall};
 use crate::collectables::PointEvent;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer};
@@ -26,6 +26,7 @@ impl Plugin for FeaturePlugin {
                 remove_entities::<With<Feature>>,
                 remove_entities::<With<FeatureGrid>>,
             ))
+            .add_event::<FeatureBonk>()
             .add_event::<BonksReload>()
             .add_systems(OnEnter(GameState::StartGame), spawn_feature_zone)
             .add_systems(Update, (grid::FeatureGrid::spawn_slots, debug_impulse))
@@ -37,6 +38,12 @@ impl Plugin for FeaturePlugin {
         //#[cfg(debug_assertions)]
         //app.add_systems(Update, spawn_feature.in_set(Playing));
     }
+}
+
+#[derive(Event)]
+pub struct FeatureBonk {
+    pub feature: Entity,
+    pub ball: Entity,
 }
 
 #[derive(Component)]
@@ -226,13 +233,19 @@ struct BonkImpulse(f32);
 
 fn feature_bonk(
     trigger: Trigger<OnCollisionStart>,
-    mut writer: EventWriter<PointEvent>,
+    mut bonk_writer: EventWriter<FeatureBonk>,
+    mut point_writer: EventWriter<PointEvent>,
     features: Query<(&GlobalTransform, &Points), With<Feature>>,
+    balls: Query<&BallComponents>,
     collider: Query<Option<&PaddleRestMult>>,
 ) {
     let Ok((transform, Points(points))) = features.get(trigger.target()) else {
         return;
     };
+
+    if balls.get(trigger.collider).is_err() {
+        return;
+    }
 
     if *points == 0 {
         return;
@@ -243,7 +256,11 @@ fn feature_bonk(
         points *= 1. + paddle_mult.0;
     }
 
-    writer.write(PointEvent {
+    bonk_writer.write(FeatureBonk {
+        feature: trigger.target(),
+        ball: trigger.collider,
+    });
+    point_writer.write(PointEvent {
         position: transform.translation().xy(),
         points: (points as usize).max(1),
     });

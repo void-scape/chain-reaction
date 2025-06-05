@@ -110,6 +110,7 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         DebugRect::from_size_color(Vec2::new(w, h), GREY),
         Collider::rectangle(w, h),
         Rotation::radians(-rot),
+        CollisionEventsEnabled,
     ));
 
     commands.spawn((
@@ -119,6 +120,7 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         DebugRect::from_size_color(Vec2::new(w, h), GREY),
         Collider::rectangle(w, h),
         Rotation::radians(rot),
+        CollisionEventsEnabled,
     ));
 
     let x = 65. + x;
@@ -131,6 +133,7 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
         DebugRect::from_size_color(Vec2::new(h, hh), GREY),
         Collider::rectangle(h, hh),
+        CollisionEventsEnabled,
     ));
 
     commands.spawn((
@@ -138,6 +141,7 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
         DebugRect::from_size_color(Vec2::new(h, hh), GREY),
         Collider::rectangle(h, hh),
+        CollisionEventsEnabled,
     ));
 
     spawn_light(
@@ -158,6 +162,7 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
         DebugRect::from_size_color(Vec2::new(hh, 50.), GREY),
         Collider::rectangle(hh, 50.),
+        CollisionEventsEnabled,
     ));
 
     // commands.spawn((

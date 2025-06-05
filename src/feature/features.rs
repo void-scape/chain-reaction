@@ -16,7 +16,7 @@ use crate::ball::{Ball, BallComponents, PlayerBall};
 use crate::collectables::{MoneyEvent, PointEvent};
 use crate::paddle::PaddleBonk;
 use crate::sampler::Sampler;
-use crate::state::GameState;
+use crate::state::{GameState, Playing};
 
 use super::{BonkImpulse, Bonks, FeatureCooldown, Points, feature_cooldown};
 
@@ -34,16 +34,17 @@ impl Plugin for FeaturesPlugin {
                     feature_cooldown::<Dispenser>,
                     feature_cooldown::<Splitter>,
                     clear_bing_bong,
-                ),
+                )
+                    .in_set(Playing),
             )
-            .add_systems(OnEnter(GameState::Selection), reset_bouncers)
             .add_observer(bumper)
             .add_observer(kaching)
             .add_observer(dispense)
             .add_observer(bing_bong)
             .add_observer(splitter)
             .add_observer(lotto)
-            .add_observer(bouncer);
+            .add_observer(field_inverter)
+            .add_observer(field_inversion);
     }
 }
 
@@ -88,11 +89,11 @@ impl Tooltips {
 pub fn spawn_feature_list(mut commands: Commands) {
     spawn_feature::<Bumper>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<MoneyBumper>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<BingBong>(&mut commands.spawn(Prob(1.)));
+    spawn_feature::<BingBong>(&mut commands.spawn(Prob(100.)));
     spawn_feature::<Dispenser>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Splitter>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Lotto>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<Bouncer>(&mut commands.spawn(Prob(1.)));
+    spawn_feature::<FieldInverter>(&mut commands.spawn(Prob(1.)));
 }
 
 fn spawn_feature<T: Default + Component + Typed>(feature: &mut EntityCommands) {
@@ -105,7 +106,7 @@ fn spawn_feature<T: Default + Component + Typed>(feature: &mut EntityCommands) {
 }
 
 /// Gives balls impulses when bonked.
-#[derive(Default, Clone, Component, Reflect)]
+#[derive(Default, Component, Reflect)]
 #[require(
     Feature,
     Points(20),
@@ -183,7 +184,7 @@ pub fn bing_bong(
 }
 
 /// Produce $1 when bonked.
-#[derive(Default, Component, Reflect, Clone)]
+#[derive(Default, Component, Reflect)]
 #[require(
     Feature,
     Points(0),
@@ -210,7 +211,7 @@ pub fn kaching(
 }
 
 /// Produce 1 new ball.
-#[derive(Default, Component, Reflect, Clone)]
+#[derive(Default, Component, Reflect)]
 #[require(
     Feature,
     Points(10),
@@ -251,7 +252,7 @@ pub fn dispense(
 }
 
 /// Loose $1 when bonked. Every bonk has a 1 in 5 chance to produce $7.
-#[derive(Default, Component, Reflect, Clone)]
+#[derive(Default, Component, Reflect)]
 #[require(
     Feature,
     BonkImpulse(1.25),
@@ -279,7 +280,7 @@ pub fn lotto(
 }
 
 /// Consumes ball, produces two new balls.
-#[derive(Default, Component, Reflect, Clone)]
+#[derive(Default, Component, Reflect)]
 #[require(
     Feature,
     Points(10),
@@ -337,36 +338,45 @@ pub fn splitter(
     }
 }
 
-/// Every second, gain $2 for every ball on the screen.
-#[derive(Component, Reflect, Clone)]
+/// When bonked, reverse the gravity of the ball for 1 bonk.
+#[derive(Default, Component, Reflect)]
 #[require(
     Feature,
     DebugCircle::color(FEATURE_RADIUS - 2., MAROON),
     Collider::circle(FEATURE_RADIUS - 2.)
 )]
-pub struct Bouncer(f32);
+pub struct FieldInverter;
 
-impl Default for Bouncer {
-    fn default() -> Self {
-        Self(2.)
-    }
-}
-
-pub fn bouncer(
+pub fn field_inverter(
     trigger: Trigger<OnCollisionStart>,
-    balls: Query<&BallComponents>,
-    mut bouncers: Query<&mut Bouncer>,
+    mut commands: Commands,
+    balls: Query<Entity, With<BallComponents>>,
+    inverters: Query<&FieldInverter>,
 ) {
-    if let (Ok(mut bouncer), Ok(_)) = (
-        bouncers.get_mut(trigger.target()),
-        balls.get(trigger.collider),
-    ) {
-        bouncer.0 /= 2.;
+    if inverters.get(trigger.target()).is_err() {
+        return;
+    };
+
+    if let Ok(entity) = balls.get(trigger.collider) {
+        commands.entity(entity).insert(FieldInversion(1));
     }
 }
 
-pub fn reset_bouncers(mut bouncers: Query<&mut Bouncer>) {
-    for mut bouncer in bouncers.iter_mut() {
-        *bouncer = Bouncer::default();
+#[derive(Component)]
+#[require(GravityScale(-1.))]
+struct FieldInversion(usize);
+
+fn field_inversion(
+    trigger: Trigger<OnCollisionStart>,
+    mut commands: Commands,
+    mut balls: Query<(Entity, &mut FieldInversion)>,
+) {
+    if let Ok((entity, mut bonks)) = balls.get_mut(trigger.collider) {
+        bonks.0 = bonks.0.saturating_sub(1);
+        if bonks.0 == 0 {
+            commands
+                .entity(entity)
+                .remove::<(FieldInversion, GravityScale)>();
+        }
     }
 }
