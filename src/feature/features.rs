@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{BLUE, GREEN, MAROON, PURPLE, RED, YELLOW};
+use bevy::color::palettes::tailwind::CYAN_700;
 use bevy::ecs::component::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
@@ -12,7 +13,8 @@ use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
 
 use crate::ball::{Ball, BallComponents, PlayerBall};
-use crate::collectables::MoneyEvent;
+use crate::collectables::{MoneyEvent, PointEvent};
+use crate::paddle::PaddleBonk;
 use crate::sampler::Sampler;
 use crate::state::GameState;
 
@@ -28,12 +30,17 @@ impl Plugin for FeaturesPlugin {
         app.add_systems(OnEnter(GameState::StartGame), spawn_feature_list)
             .add_systems(
                 Update,
-                (feature_cooldown::<Dispenser>, feature_cooldown::<Splitter>),
+                (
+                    feature_cooldown::<Dispenser>,
+                    feature_cooldown::<Splitter>,
+                    clear_bing_bong,
+                ),
             )
             .add_systems(OnEnter(GameState::Selection), reset_bouncers)
             .add_observer(bumper)
             .add_observer(kaching)
             .add_observer(dispense)
+            .add_observer(bing_bong)
             .add_observer(splitter)
             .add_observer(lotto)
             .add_observer(bouncer);
@@ -81,6 +88,7 @@ impl Tooltips {
 pub fn spawn_feature_list(mut commands: Commands) {
     spawn_feature::<Bumper>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<MoneyBumper>(&mut commands.spawn(Prob(1.)));
+    spawn_feature::<BingBong>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Dispenser>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Splitter>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Lotto>(&mut commands.spawn(Prob(1.)));
@@ -121,6 +129,57 @@ pub fn bumper(
         SamplePlayer::new(server.load("audio/pinball/1MetalKLANK.ogg"))
             .with_volume(Volume::Linear(0.4)),
     );
+}
+
+/// Indicates how many times a ball has hit a BingBong.
+#[derive(Default, Clone, Component, Reflect)]
+pub struct BingBongLevel(u32);
+
+fn clear_bing_bong(mut commands: Commands, mut paddle_hit: EventReader<PaddleBonk>) {
+    for bonk in paddle_hit.read() {
+        commands.entity(bonk.0).remove::<BingBongLevel>();
+    }
+}
+
+/// Double the points received until hit with the paddle.
+#[derive(Default, Clone, Component, Reflect)]
+#[require(
+    Feature,
+    Points(0),
+    BonkImpulse(2.),
+    DebugCircle::color(FEATURE_RADIUS, CYAN_700),
+    Collider::circle(FEATURE_RADIUS)
+)]
+pub struct BingBong;
+
+pub fn bing_bong(
+    trigger: Trigger<OnCollisionStart>,
+    mut commands: Commands,
+    // server: Res<AssetServer>,
+    bing_bongs: Query<&GlobalTransform, With<BingBong>>,
+    mut balls: Query<&mut BingBongLevel>,
+    mut event_writer: EventWriter<PointEvent>,
+) {
+    let Ok(transform) = bing_bongs.get(trigger.target()) else {
+        return;
+    };
+
+    match balls.get_mut(trigger.collider) {
+        Ok(mut level) => {
+            event_writer.write(PointEvent {
+                points: 2usize.pow(level.0) * 10,
+                position: transform.translation().xy(),
+            });
+            level.0 += 1;
+        }
+        Err(_) => {
+            event_writer.write(PointEvent {
+                points: 10,
+                position: transform.translation().xy(),
+            });
+            commands.entity(trigger.collider).insert(BingBongLevel(1));
+        }
+    }
 }
 
 /// Produce $1 when bonked.
