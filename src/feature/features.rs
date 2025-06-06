@@ -59,8 +59,16 @@ pub struct Prob(pub f32);
 #[derive(Component, Clone)]
 pub struct FeatureSpawner(pub Arc<dyn Fn(&mut EntityCommands) + Send + Sync>);
 
+impl FeatureSpawner {
+    pub fn new<T: Component + Default>() -> Self {
+        Self(Arc::new(|commands: &mut EntityCommands| {
+            commands.insert(T::default());
+        }))
+    }
+}
+
 #[derive(Default, Component)]
-#[require(Feature, Transform, Visibility::Visible)]
+#[require(Transform, Visibility::Visible)]
 #[component(on_insert = Self::on_insert_hook)]
 pub struct Tooltips {
     pub name: &'static str,
@@ -78,8 +86,12 @@ impl Tooltips {
 
 impl Tooltips {
     pub fn new<T: Typed>() -> Self {
+        Self::named::<T>(T::type_ident().unwrap())
+    }
+
+    pub fn named<T: Typed>(name: &'static str) -> Self {
         Self {
-            name: T::type_ident().unwrap(),
+            name,
             desc: T::type_info()
                 .docs()
                 .expect("`Feature` has no documentation"),
@@ -88,28 +100,29 @@ impl Tooltips {
 }
 
 pub fn spawn_feature_list(mut commands: Commands) {
-    spawn_feature::<Bumper>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<MoneyBumper>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<BingBong>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<Dispenser>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<Splitter>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<Lotto>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<FieldInverter>(&mut commands.spawn(Prob(1.)));
+    commands.spawn((Bumper, Prob(1.), feature_bundle()));
+    commands.spawn((MoneyBumper, Prob(1.), feature_bundle()));
+    commands.spawn((BingBong, Prob(1.), feature_bundle()));
+    commands.spawn((Dispenser, Prob(1.), feature_bundle()));
+    commands.spawn((Splitter, Prob(1.), feature_bundle()));
+    commands.spawn((Lotto, Prob(1.), feature_bundle()));
+    commands.spawn((FieldInverter, Prob(1.), feature_bundle()));
 }
 
-fn spawn_feature<T: Default + Component + Typed>(feature: &mut EntityCommands) {
-    feature.insert((
-        FeatureSpawner(Arc::new(|commands: &mut EntityCommands| {
-            commands.insert(T::default());
-        })),
-        Tooltips::new::<T>(),
-    ));
+fn feature_bundle() -> impl Bundle {
+    (
+        ColliderDisabled,
+        Visibility::Hidden,
+        Transform::from_xyz(crate::WIDTH * 2., 0., 0.),
+    )
 }
 
 /// Gives balls impulses when bonked.
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     Points(20),
     BonkImpulse(2.),
     DebugCircle::color(FEATURE_RADIUS, RED),
@@ -147,6 +160,8 @@ fn clear_bing_bong(mut commands: Commands, mut paddle_hit: EventReader<PaddleBon
 #[derive(Default, Clone, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     Points(0),
     BonkImpulse(2.),
     DebugCircle::color(FEATURE_RADIUS, CYAN_700),
@@ -188,6 +203,8 @@ pub fn bing_bong(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     Points(0),
     Bonks::Limited(3),
     BonkImpulse(1.25),
@@ -215,6 +232,8 @@ pub fn kaching(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     Points(10),
     Bonks::Limited(10),
     DebugCircle::color(FEATURE_RADIUS, GREEN),
@@ -258,6 +277,8 @@ pub fn dispense(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     BonkImpulse(1.25),
     DebugCircle::color(FEATURE_RADIUS, PURPLE),
     Collider::circle(FEATURE_RADIUS)
@@ -286,6 +307,8 @@ pub fn lotto(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     Points(10),
     DebugCircle::color(FEATURE_RADIUS - 2., BLUE),
     Collider::circle(FEATURE_RADIUS - 2.)
@@ -347,6 +370,8 @@ pub fn splitter(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
     DebugCircle::color(FEATURE_RADIUS - 2., MAROON),
     Collider::circle(FEATURE_RADIUS - 2.)
 )]

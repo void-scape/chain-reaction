@@ -24,6 +24,7 @@ mod loading;
 mod menu;
 mod paddle;
 mod particles;
+mod sandbox;
 mod selection;
 //mod queue;
 mod feature;
@@ -33,7 +34,7 @@ mod state;
 mod text;
 mod tween;
 
-pub const WIDTH: f32 = 550.;
+pub const WIDTH: f32 = 750.;
 pub const HEIGHT: f32 = 750.;
 pub const RESOLUTION_SCALE: f32 = 1.;
 
@@ -71,7 +72,6 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
             bevy_tween::DefaultTweenPlugins,
             bevy_enhanced_input::EnhancedInputPlugin,
-            avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
             avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
             bevy_optix::pixel_perfect::PixelPerfectPlugin(CanvasDimensions {
                 width: (WIDTH * 1.5) as u32,
@@ -88,7 +88,6 @@ fn main() {
             paddle::PaddlePlugin,
             ball::BallPlugin,
             feature::FeaturePlugin,
-            //queue::QueuePlugin,
             particles::ParticlePlugin,
             input::InputPlugin,
             cabinet::CabinetPlugin,
@@ -100,11 +99,13 @@ fn main() {
             leaderboard::LeaderBoardPlugin,
             selection::SelectionPlugin,
         ))
+        .add_plugins((sandbox::SandboxPlugin,))
         .add_plugins((
             bevy_egui::EguiPlugin {
                 enable_multipass_for_primary_context: true,
             },
             bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+            avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
         ))
         .init_schedule(Avian)
         .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
