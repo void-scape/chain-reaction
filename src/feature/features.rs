@@ -20,6 +20,7 @@ use crate::state::{GameState, Playing};
 
 use super::{BonkImpulse, Bonks, FeatureCooldown, Points, feature_cooldown};
 
+pub const MAX_BALLS: usize = 2000;
 pub const FEATURE_SIZE: f32 = 36.0;
 pub const FEATURE_RADIUS: f32 = FEATURE_SIZE / 2.;
 
@@ -89,7 +90,7 @@ impl Tooltips {
 pub fn spawn_feature_list(mut commands: Commands) {
     spawn_feature::<Bumper>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<MoneyBumper>(&mut commands.spawn(Prob(1.)));
-    spawn_feature::<BingBong>(&mut commands.spawn(Prob(100.)));
+    spawn_feature::<BingBong>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Dispenser>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Splitter>(&mut commands.spawn(Prob(1.)));
     spawn_feature::<Lotto>(&mut commands.spawn(Prob(1.)));
@@ -242,12 +243,14 @@ pub fn dispense(
         let initial_velocity =
             (feature.translation.xy() - ball).normalize_or_zero() * velocity.0.length();
 
-        commands.spawn((
-            Ball,
-            FeatureCooldown::<Dispenser>::from_seconds(0.2),
-            feature,
-            LinearVelocity(initial_velocity * 0.75),
-        ));
+        if balls.iter().len() < MAX_BALLS {
+            commands.spawn((
+                Ball,
+                FeatureCooldown::<Dispenser>::from_seconds(0.2),
+                feature,
+                LinearVelocity(initial_velocity * 0.75),
+            ));
+        }
     }
 }
 
@@ -314,27 +317,29 @@ pub fn splitter(
 
         let rot = PI / 8.;
 
-        commands.spawn((
-            Ball,
-            FeatureCooldown::<Splitter>::from_seconds(0.2),
-            feature,
-            LinearVelocity(
-                Vec2::from_angle(rot)
-                    .normalize()
-                    .rotate(initial_velocity * 0.75),
-            ),
-        ));
+        if balls.iter().len() < MAX_BALLS {
+            commands.spawn((
+                Ball,
+                FeatureCooldown::<Splitter>::from_seconds(0.2),
+                feature,
+                LinearVelocity(
+                    Vec2::from_angle(rot)
+                        .normalize()
+                        .rotate(initial_velocity * 0.75),
+                ),
+            ));
 
-        commands.spawn((
-            Ball,
-            FeatureCooldown::<Splitter>::from_seconds(0.2),
-            feature,
-            LinearVelocity(
-                Vec2::from_angle(-rot)
-                    .normalize()
-                    .rotate(initial_velocity * 0.75),
-            ),
-        ));
+            commands.spawn((
+                Ball,
+                FeatureCooldown::<Splitter>::from_seconds(0.2),
+                feature,
+                LinearVelocity(
+                    Vec2::from_angle(-rot)
+                        .normalize()
+                        .rotate(initial_velocity * 0.75),
+                ),
+            ));
+        }
     }
 }
 

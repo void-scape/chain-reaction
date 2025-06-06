@@ -112,7 +112,7 @@ fn spawn_paddles(mut commands: Commands) {
     let h = 7.5;
 
     let x = 60.;
-    let y = 50.;
+    let y = 20.;
 
     let fact = 1.4;
 

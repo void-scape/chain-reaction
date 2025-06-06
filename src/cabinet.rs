@@ -47,7 +47,12 @@ fn lighting(mut commands: Commands) {
 
 #[derive(Component)]
 #[require(RigidBody::Static)]
-struct CabinetMesh(Handle<Gltf>);
+struct CabinetMesh {
+    scene: Handle<Gltf>,
+    mesh: &'static str,
+}
+
+const CABINET_SCALE: f32 = 235.0;
 
 fn make_colliders(
     meshes: Query<(Entity, &CabinetMesh), Without<Collider>>,
@@ -56,12 +61,12 @@ fn make_colliders(
     gltf_mesh_assets: Res<Assets<bevy::gltf::GltfMesh>>,
     mesh_assets: Res<Assets<Mesh>>,
 ) {
-    for (mesh_entity, mesh) in &meshes {
-        let Some(mesh_data) = gltf_assets.get(&mesh.0) else {
+    for (mesh_entity, CabinetMesh { scene, mesh }) in &meshes {
+        let Some(mesh_data) = gltf_assets.get(scene) else {
             continue;
         };
 
-        let plane = &mesh_data.named_meshes["Plane"];
+        let plane = &mesh_data.named_meshes[*mesh];
         let Some(mesh) = gltf_mesh_assets.get(plane) else {
             continue;
         };
@@ -73,7 +78,11 @@ fn make_colliders(
             .triangles()
             .unwrap()
             .flat_map(|t| t.vertices)
-            .map(|v| v.xz() * 250.0)
+            .map(|v| {
+                let mut twod = v.xz() * CABINET_SCALE;
+                twod.y *= -1.0;
+                twod
+            })
             .collect::<Vec<_>>();
         let index_buffer = (0..vertex_buffer.len() as u32 / 3)
             .map(|i| {
@@ -82,7 +91,6 @@ fn make_colliders(
             })
             .collect::<Vec<_>>();
 
-        info_once!("mesh: {:#?}", vertex_buffer);
         let collider = Collider::trimesh(vertex_buffer, index_buffer);
 
         let aabb = collider.aabb(Vec2::default(), Quat::default());
@@ -93,7 +101,7 @@ fn make_colliders(
     }
 }
 
-fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
+fn spawn_edges(mut commands: Commands, server: Res<AssetServer>) {
     let x = 160.;
     let y = 130.;
 
@@ -102,47 +110,47 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
 
     let rot = PI / 4.5;
 
-    // walls
-    commands.spawn((
-        RigidBody::Static,
-        Restitution::new(0.7),
-        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size_color(Vec2::new(w, h), GREY),
-        Collider::rectangle(w, h),
-        Rotation::radians(-rot),
-        CollisionEventsEnabled,
-    ));
-
-    commands.spawn((
-        RigidBody::Static,
-        Restitution::new(0.7),
-        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size_color(Vec2::new(w, h), GREY),
-        Collider::rectangle(w, h),
-        Rotation::radians(rot),
-        CollisionEventsEnabled,
-    ));
+    // // walls
+    // commands.spawn((
+    //     RigidBody::Static,
+    //     Restitution::new(0.7),
+    //     Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
+    //     DebugRect::from_size_color(Vec2::new(w, h), GREY),
+    //     Collider::rectangle(w, h),
+    //     Rotation::radians(-rot),
+    //     CollisionEventsEnabled,
+    // ));
+    //
+    // commands.spawn((
+    //     RigidBody::Static,
+    //     Restitution::new(0.7),
+    //     Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
+    //     DebugRect::from_size_color(Vec2::new(w, h), GREY),
+    //     Collider::rectangle(w, h),
+    //     Rotation::radians(rot),
+    //     CollisionEventsEnabled,
+    // ));
 
     let x = 65. + x;
     let y = 150. + y;
 
     let hh = 1000.;
 
-    commands.spawn((
-        RigidBody::Static,
-        Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size_color(Vec2::new(h, hh), GREY),
-        Collider::rectangle(h, hh),
-        CollisionEventsEnabled,
-    ));
-
-    commands.spawn((
-        RigidBody::Static,
-        Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
-        DebugRect::from_size_color(Vec2::new(h, hh), GREY),
-        Collider::rectangle(h, hh),
-        CollisionEventsEnabled,
-    ));
+    // commands.spawn((
+    //     RigidBody::Static,
+    //     Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
+    //     DebugRect::from_size_color(Vec2::new(h, hh), GREY),
+    //     Collider::rectangle(h, hh),
+    //     CollisionEventsEnabled,
+    // ));
+    //
+    // commands.spawn((
+    //     RigidBody::Static,
+    //     Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
+    //     DebugRect::from_size_color(Vec2::new(h, hh), GREY),
+    //     Collider::rectangle(h, hh),
+    //     CollisionEventsEnabled,
+    // ));
 
     spawn_light(
         &mut commands,
@@ -157,18 +165,65 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
         HexColor(0x4a2480),
     );
 
+    // commands.spawn((
+    //     RigidBody::Static,
+    //     Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
+    //     DebugRect::from_size_color(Vec2::new(hh, 50.), GREY),
+    //     Collider::rectangle(hh, 50.),
+    //     CollisionEventsEnabled,
+    // ));
+
+    let cabinet_transform = Transform::from_xyz(0., crate::HEIGHT * 0.15, CABZ);
+
     commands.spawn((
-        RigidBody::Static,
-        Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
-        DebugRect::from_size_color(Vec2::new(hh, 50.), GREY),
-        Collider::rectangle(hh, 50.),
         CollisionEventsEnabled,
+        RigidBody::Static,
+        CabinetMesh {
+            scene: server.load("meshes/cabinet.gltf"),
+            mesh: "Cabinet",
+        },
+        cabinet_transform,
     ));
 
-    // commands.spawn((
-    //     CabinetMesh(server.load("meshes/square.gltf")),
-    //     Transform::from_xyz(0., crate::HEIGHT * 0.33, CABZ),
-    // ));
+    commands.spawn((
+        CollisionEventsEnabled,
+        RigidBody::Static,
+        CabinetMesh {
+            scene: server.load("meshes/cabinet.gltf"),
+            mesh: "LeftSling",
+        },
+        cabinet_transform,
+    ));
+
+    commands.spawn((
+        CollisionEventsEnabled,
+        RigidBody::Static,
+        CabinetMesh {
+            scene: server.load("meshes/cabinet.gltf"),
+            mesh: "RightSling",
+        },
+        cabinet_transform,
+    ));
+
+    commands.spawn((
+        CollisionEventsEnabled,
+        RigidBody::Static,
+        CabinetMesh {
+            scene: server.load("meshes/cabinet.gltf"),
+            mesh: "LeftChannel",
+        },
+        cabinet_transform,
+    ));
+
+    commands.spawn((
+        CollisionEventsEnabled,
+        RigidBody::Static,
+        CabinetMesh {
+            scene: server.load("meshes/cabinet.gltf"),
+            mesh: "RightChannel",
+        },
+        cabinet_transform,
+    ));
 }
 
 fn spawn_light(commands: &mut Commands, position: Vec2, rotation: f32, color: impl Into<Color>) {

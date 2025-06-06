@@ -114,7 +114,7 @@ fn stage(
             stage.lives -= 1;
             commands.spawn((
                 PlayerBall,
-                Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.),
+                Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 80., 0.),
             ));
 
             commands.spawn(
