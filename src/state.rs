@@ -2,6 +2,7 @@ use bevy::ecs::query::QueryFilter;
 use bevy::ecs::system::ScheduleSystem;
 use bevy::prelude::*;
 
+use crate::sandbox;
 use crate::selection::{FeaturePack, SelectionEvent};
 
 pub struct StatePlugin;
@@ -96,10 +97,14 @@ fn reset(mut commands: Commands) {
     commands.set_state(GameState::StartGame);
 }
 
-fn start(mut writer: EventWriter<SelectionEvent>) {
-    writer.write(SelectionEvent {
-        packs: FeaturePack::triple_starter(),
-    });
+fn start(mut commands: Commands, mut writer: EventWriter<SelectionEvent>) {
+    if !sandbox::ENABLED {
+        writer.write(SelectionEvent {
+            packs: FeaturePack::triple_starter(),
+        });
+    } else {
+        commands.set_state(GameState::Playing);
+    }
 }
 
 pub fn remove_entities<T: QueryFilter>(mut commands: Commands, entities: Query<Entity, T>) {

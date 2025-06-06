@@ -7,8 +7,9 @@ use convert_case::{Case, Casing};
 
 use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
 use crate::feature::{Feature, FeatureSpawner, Prob, Tooltips};
+use crate::sandbox;
 use crate::stage::{AdvanceEvent, StageSet};
-use crate::state::{GameState, StateAppExt, remove_entities};
+use crate::state::{GameState, Playing, StateAppExt, remove_entities};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct SelectionSet;
@@ -28,13 +29,21 @@ impl Plugin for SelectionPlugin {
                     .in_set(SelectionSet),
             )
             .add_systems(OnEnter(SelectionState::SpawnSelection), spawn_selection)
-            .add_systems(
+            .add_systems(Update, report_entities);
+
+        if sandbox::ENABLED {
+            app.add_systems(
+                Update,
+                (spawn_feature, select_feature).chain().in_set(Playing),
+            );
+        } else {
+            app.add_systems(
                 Update,
                 (spawn_feature, select_feature)
                     .chain()
                     .run_if(in_state(SelectionState::SelectAndSpawn)),
-            )
-            .add_systems(Update, report_entities);
+            );
+        }
     }
 }
 
@@ -85,8 +94,11 @@ fn enter(mut commands: Commands, mut reader: EventReader<SelectionEvent>) {
     }
 }
 
-#[derive(Clone, Component)]
+#[derive(Component)]
 struct Selection;
+
+#[derive(Component)]
+pub struct SelectionFeature;
 
 const SELECTIONZ: f32 = 800.;
 
@@ -95,7 +107,6 @@ struct EntityReporter(String);
 
 fn report_entities(q: Query<(Entity, &EntityReporter)>, mut commands: Commands) {
     for (entity, reporter) in q.iter() {
-        info!("logging {} coponents", reporter.0);
         commands
             .entity(entity)
             .log_components()
@@ -105,9 +116,8 @@ fn report_entities(q: Query<(Entity, &EntityReporter)>, mut commands: Commands) 
 
 fn spawn_selection(
     mut commands: Commands,
-    _server: Res<AssetServer>,
     mut packs: Single<&mut FeaturePacks>,
-    features: Query<(Entity, &Tooltips, &Prob, &FeatureSpawner)>,
+    features: Query<(&Tooltips, &Prob, &FeatureSpawner)>,
 ) {
     commands.spawn((
         Selection,
@@ -134,7 +144,7 @@ fn spawn_selection(
 
     let samples = features
         .iter()
-        .map(|(entity, tips, prob, spawner)| ((entity, tips, spawner), prob.0))
+        .map(|(tips, prob, spawner)| ((tips, spawner), prob.0))
         .collect::<Vec<_>>();
     let sampler = crate::sampler::Sampler::new(&samples);
 
@@ -145,25 +155,15 @@ fn spawn_selection(
     let positions = [-300., 0., 300.];
     let y = crate::RES_HEIGHT / 3. - 50.;
 
-    for ((entity, tips, spawner), x) in features.into_iter().zip(positions) {
+    for ((tips, spawner), x) in features.into_iter().zip(positions) {
         let mut selection = commands.spawn((
             spawner.clone(),
             Selection,
+            SelectionFeature,
             ColliderDisabled,
             Transform::from_xyz(x, y, SELECTIONZ),
         ));
         spawner.0(&mut selection);
-
-        // commands
-        //     .entity(entity)
-        //     .clone_and_spawn_with(|config| {
-        //         config.allow_all().deny::<Disabled>().linked_cloning(true);
-        //     })
-        //     .insert((
-        //         Selection,
-        //         ColliderDisabled,
-        //         Transform::from_xyz(x, y, SELECTIONZ),
-        //     ));
 
         commands.spawn((
             Selection,
@@ -185,7 +185,10 @@ fn spawn_selection(
 
 fn select_feature(
     mut commands: Commands,
-    options: Query<(Entity, &FeatureSpawner, &GlobalTransform), (With<Selection>, With<Feature>)>,
+    options: Query<
+        (Entity, &FeatureSpawner, &GlobalTransform),
+        (With<SelectionFeature>, With<Feature>),
+    >,
 
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -205,8 +208,6 @@ fn select_feature(
     else {
         return;
     };
-
-    // check for the nearest feature slot within some threshold
 
     let Some((_, selected_feature, transform)) = options.iter().min_by(|a, b| {
         let a = world_position.distance_squared(a.2.translation().xy());
@@ -228,15 +229,17 @@ fn select_feature(
     }
 
     commands.spawn(SelectedFeature(selected_feature.clone()));
-    for entity in selection_entities.iter() {
-        commands
-            .entity(entity)
-            .insert_recursive::<Children>(Disabled);
+    if !sandbox::ENABLED {
+        for entity in selection_entities.iter() {
+            commands
+                .entity(entity)
+                .insert_recursive::<Children>(Disabled);
+        }
     }
 }
 
 #[derive(Component)]
-struct SelectedFeature(FeatureSpawner);
+pub struct SelectedFeature(FeatureSpawner);
 
 fn spawn_feature(
     mut commands: Commands,
@@ -247,7 +250,7 @@ fn spawn_feature(
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
 
-    packs: Single<(Entity, &FeaturePacks)>,
+    packs: Option<Single<(Entity, &FeaturePacks)>>,
 ) {
     let (camera, gt) = camera.into_inner();
     if !input.just_pressed(MouseButton::Left) {
@@ -261,8 +264,6 @@ fn spawn_feature(
     else {
         return;
     };
-
-    // check for the nearest feature slot within some threshold
 
     let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
         let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
@@ -290,25 +291,22 @@ fn spawn_feature(
         Transform::default(),
     ));
     selected_feature.0.0(&mut entity_commands);
-    // commands
-    //     .entity(selected_feature.0)
-    //     .remove_recursive::<Children, Disabled>()
-    //     .remove::<(Selection, ColliderDisabled)>()
-    //     .insert((
-    //         SlotFeatureOf(nearest_slot),
-    //         ChildOf(nearest_slot),
-    //         Transform::default(),
-    //     ));
     commands.entity(entity).despawn();
     commands.run_system_cached(
         remove_entities::<(With<Selection>, Or<(With<Disabled>, Without<Disabled>)>)>,
     );
 
-    let (entity, packs) = packs.into_inner();
-    if packs.0.is_empty() {
-        commands.set_state(GameState::Playing);
-        commands.entity(entity).despawn();
-    } else {
-        commands.set_state(SelectionState::SpawnSelection);
+    if sandbox::ENABLED {
+        return;
+    }
+
+    if let Some(packs) = packs {
+        let (entity, packs) = packs.into_inner();
+        if packs.0.is_empty() {
+            commands.set_state(GameState::Playing);
+            commands.entity(entity).despawn();
+        } else {
+            commands.set_state(SelectionState::SpawnSelection);
+        }
     }
 }

@@ -5,6 +5,7 @@ use bevy_seedling::prelude::*;
 
 use crate::ball::{BallComponents, PlayerBall};
 use crate::collectables::Points;
+use crate::sandbox;
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
@@ -24,8 +25,11 @@ impl Plugin for StagePlugin {
                     Anchor::BottomLeft,
                 ),
             )
-            .add_systems(PreUpdate, stage.in_set(StageSet))
             .configure_sets(PreUpdate, StageSet.in_set(Playing));
+
+        if !sandbox::ENABLED {
+            app.add_systems(PreUpdate, stage.in_set(StageSet));
+        }
     }
 }
 
@@ -114,7 +118,7 @@ fn stage(
             stage.lives -= 1;
             commands.spawn((
                 PlayerBall,
-                Transform::from_xyz(-crate::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.),
+                Transform::from_xyz(-crate::cabinet::WIDTH / 2. + 80., crate::HEIGHT / 2. - 20., 0.),
             ));
 
             commands.spawn(

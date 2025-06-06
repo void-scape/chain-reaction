@@ -16,6 +16,9 @@ use crate::collectables::HexColor;
 use crate::float_tween_wrapper;
 use crate::state::GameState;
 
+pub const WIDTH: f32 = 550.;
+pub const HEIGHT: f32 = 750.;
+
 pub const CABZ: f32 = -100.;
 
 pub struct CabinetPlugin;
@@ -146,14 +149,14 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
 
     spawn_light(
         &mut commands,
-        Vec2::new(-x, 0.),
-        PI / 4.,
+        //Vec2::new(-x, 0.),
+        //PI / 4.,
         HexColor(0xc53a9d),
     );
     spawn_light(
         &mut commands,
-        Vec2::new(x, 0.),
-        -PI / 4. + PI,
+        //Vec2::new(x, 0.),
+        //-PI / 4. + PI,
         HexColor(0x4a2480),
     );
 
@@ -171,7 +174,7 @@ fn spawn_edges(mut commands: Commands, _server: Res<AssetServer>) {
     // ));
 }
 
-fn spawn_light(commands: &mut Commands, position: Vec2, rotation: f32, color: impl Into<Color>) {
+fn spawn_light(commands: &mut Commands, color: impl Into<Color>) {
     let entity = commands
         .spawn((
             PointLight2d {

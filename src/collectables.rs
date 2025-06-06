@@ -30,7 +30,7 @@ impl Plugin for CollectablePlugin {
                     debug_res::<Money>(
                         Transform::from_xyz(
                             -crate::RES_WIDTH / 2.,
-                            -crate::RES_HEIGHT / 2. + 40.,
+                            -crate::RES_HEIGHT / 2. + 25.,
                             500.,
                         ),
                         bevy::sprite::Anchor::BottomLeft,

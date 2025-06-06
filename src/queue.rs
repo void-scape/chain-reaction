@@ -39,7 +39,7 @@ fn spawn_queue(mut commands: Commands) {
             &mut rng,
             (
                 Queue(id),
-                Transform::from_xyz(crate::WIDTH / 2. - 20., i as f32 * -offset, 0.),
+                Transform::from_xyz(crate::cabinet::WIDTH / 2. - 20., i as f32 * -offset, 0.),
             ),
         );
     }
@@ -88,7 +88,7 @@ fn spawn_feature(
             (
                 Queue(queue),
                 Transform::from_xyz(
-                    crate::WIDTH / 2. - 20.,
+                    crate::cabinet::WIDTH / 2. - 20.,
                     (features.iter().count() as f32 - 1.) * -offset,
                     0.,
                 ),

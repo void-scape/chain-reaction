@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::ball::{Ball, BallComponents, PaddleRestMult, PlayerBall};
 use crate::collectables::PointEvent;
 use crate::state::{GameState, StateAppExt, remove_entities};
-use crate::{Avian, Layer};
+use crate::{Avian, Layer, cabinet};
 use avian2d::prelude::PhysicsSet;
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -34,12 +34,10 @@ impl Plugin for FeaturePlugin {
             .add_observer(bonks)
             .add_observer(bonk_bounce)
             .add_observer(feature_bonk);
-
-        //#[cfg(debug_assertions)]
-        //app.add_systems(Update, spawn_feature.in_set(Playing));
     }
 }
 
+#[allow(unused)]
 #[derive(Event)]
 pub struct FeatureBonk {
     pub feature: Entity,
@@ -49,7 +47,7 @@ pub struct FeatureBonk {
 #[derive(Component)]
 #[require(
     RigidBody::Kinematic,
-    Collider::rectangle(crate::WIDTH / 1.5, crate::HEIGHT / 1.5),
+    Collider::rectangle(cabinet::WIDTH / 1.5, cabinet::HEIGHT / 1.5),
     CollisionLayers::new(Layer::FeatureZone, Layer::Ball),
     CollisionEventsEnabled,
     Sensor,
@@ -88,62 +86,6 @@ fn invalidate_balls(
         commands.entity(entity).remove::<ValidZone>();
     }
 }
-
-//fn spawn_feature(
-//    mut commands: Commands,
-//    digits: Res<ButtonInput<KeyCode>>,
-//    input: Res<ButtonInput<MouseButton>>,
-//    window: Single<&Window, With<PrimaryWindow>>,
-//    camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
-//    slots: Query<(Entity, &GlobalTransform), (With<FeatureSlot>, Without<SlotFeature>)>,
-//
-//    mut selection: Local<Feature>,
-//) {
-//    if digits.just_pressed(KeyCode::Digit1) {
-//        *selection = Feature::Bumper;
-//    } else if digits.just_pressed(KeyCode::Digit2) {
-//        *selection = Feature::Dispenser;
-//    }
-//
-//    let (camera, gt) = camera.into_inner();
-//    if !input.just_pressed(MouseButton::Left) {
-//        return;
-//    }
-//
-//    let Some(world_position) = window
-//        .cursor_position()
-//        .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
-//        .map(|ray| ray.origin.truncate() / crate::RESOLUTION_SCALE)
-//    else {
-//        return;
-//    };
-//
-//    // check for the nearest feature slot within some threshold
-//
-//    let Some((nearest_slot, transform)) = slots.iter().min_by(|a, b| {
-//        let a = world_position.distance_squared(a.1.compute_transform().translation.xy());
-//        let b = world_position.distance_squared(b.1.compute_transform().translation.xy());
-//
-//        a.total_cmp(&b)
-//    }) else {
-//        return;
-//    };
-//
-//    if transform
-//        .compute_transform()
-//        .translation
-//        .xy()
-//        .distance(world_position)
-//        > 50.0
-//    {
-//        return;
-//    }
-//
-//    selection.spawn(
-//        &mut commands,
-//        (SlotFeatureOf(nearest_slot), ChildOf(nearest_slot)),
-//    );
-//}
 
 /// The base amount of points a feature should give.
 #[derive(Clone, Component)]
