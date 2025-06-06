@@ -6,7 +6,7 @@ use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 use convert_case::{Case, Casing};
 
 use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
-use crate::feature::{Feature, FeatureSpawner, Prob, Tooltips};
+use crate::feature::{Feature, FeatureSpawner, Rarity, Tooltips};
 use crate::sandbox;
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
@@ -28,8 +28,8 @@ impl Plugin for SelectionPlugin {
                     .after(StageSet)
                     .in_set(SelectionSet),
             )
-            .add_systems(OnEnter(SelectionState::SpawnSelection), spawn_selection)
-            .add_systems(Update, report_entities);
+            .add_systems(OnEnter(SelectionState::SpawnSelection), spawn_selection);
+        //.add_systems(Update, report_entities);
 
         if sandbox::ENABLED {
             app.add_systems(
@@ -102,22 +102,24 @@ pub struct SelectionFeature;
 
 const SELECTIONZ: f32 = 800.;
 
-#[derive(Component, Clone)]
-struct EntityReporter(String);
-
-fn report_entities(q: Query<(Entity, &EntityReporter)>, mut commands: Commands) {
-    for (entity, reporter) in q.iter() {
-        commands
-            .entity(entity)
-            .log_components()
-            .remove::<EntityReporter>();
-    }
-}
+//#[derive(Component, Clone)]
+//struct EntityReporter(String);
+//
+//fn report_entities(q: Query<(Entity, &EntityReporter)>, mut commands: Commands) {
+//    for (entity, reporter) in q.iter() {
+//        commands
+//            .entity(entity)
+//            .log_components()
+//            .remove::<EntityReporter>();
+//    }
+//}
 
 fn spawn_selection(
     mut commands: Commands,
     mut packs: Single<&mut FeaturePacks>,
-    features: Query<(&Tooltips, &Prob, &FeatureSpawner)>,
+    features: Query<(&Tooltips, &Rarity, &FeatureSpawner)>,
+
+    mut rare_offset: Local<f32>,
 ) {
     commands.spawn((
         Selection,
@@ -144,18 +146,28 @@ fn spawn_selection(
 
     let samples = features
         .iter()
-        .map(|(tips, prob, spawner)| ((tips, spawner), prob.0))
+        .map(|(tips, prob, spawner)| ((tips, spawner, prob), prob.as_prob(*rare_offset)))
         .collect::<Vec<_>>();
-    let sampler = crate::sampler::Sampler::new(&samples);
+
+    const RARE_INCREASE: f32 = 0.05;
+    if samples
+        .iter()
+        .any(|((_, _, prob), _)| matches!(prob, Rarity::Rare))
+    {
+        *rare_offset = 0.;
+    } else {
+        *rare_offset += RARE_INCREASE / 3.;
+    }
+    let mut sampler = crate::sampler::Sampler::new(&samples);
 
     let features = match pack {
-        FeaturePack::Starter => (0..3).map(|_| sampler.sample(&mut rng)).collect::<Vec<_>>(),
+        FeaturePack::Starter => sampler.sample_unique(&mut rng, 3),
     };
 
     let positions = [-300., 0., 300.];
     let y = crate::RES_HEIGHT / 3. - 50.;
 
-    for ((tips, spawner), x) in features.into_iter().zip(positions) {
+    for ((tips, spawner, _), x) in features.into_iter().zip(positions) {
         let mut selection = commands.spawn((
             spawner.clone(),
             Selection,

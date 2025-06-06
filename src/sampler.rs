@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use bevy::ecs::relationship::RelationshipSourceCollection;
 use rand::Rng;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
@@ -36,6 +37,21 @@ where
 
     pub fn sample(&self, rng: &mut impl Rng) -> T {
         self.choices[self.dist.sample(rng)].clone()
+    }
+
+    pub fn sample_unique(&mut self, rng: &mut impl Rng, count: usize) -> Vec<T> {
+        assert!(count <= self.choices.len());
+
+        let old_weights = self.dist.clone();
+        let mut samples = Vec::with_capacity(count);
+        for _ in 0..count {
+            let index = self.dist.sample(rng);
+            samples.push(self.choices[index].clone());
+            self.dist.update_weights(&[(index, &0.0)]);
+        }
+        self.dist = old_weights;
+
+        samples
     }
 
     pub fn iter(&self, rng: &mut impl Rng, samples: usize) -> impl Iterator<Item = T> {

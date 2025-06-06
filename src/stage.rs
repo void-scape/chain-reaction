@@ -82,7 +82,8 @@ impl Stage {
     }
 
     pub fn win(&self) -> bool {
-        self.level >= 2
+        false
+        //self.level >= 2
     }
 
     fn points(level: usize) -> usize {
@@ -144,7 +145,9 @@ fn stage(
     }
 }
 
-fn win(_: Trigger<OnAdd, Win>, mut commands: Commands, server: Res<AssetServer>) {
+fn win(trigger: Trigger<OnAdd, Win>, mut commands: Commands, server: Res<AssetServer>) {
+    commands.entity(trigger.target()).remove::<Win>();
+
     commands.set_state(GameState::Leaderboard);
     commands.spawn(
         SamplePlayer::new(server.load("audio/pinball/1JACKPOT.ogg"))
@@ -152,7 +155,9 @@ fn win(_: Trigger<OnAdd, Win>, mut commands: Commands, server: Res<AssetServer>)
     );
 }
 
-fn loose(_: Trigger<OnAdd, Loose>, mut commands: Commands, server: Res<AssetServer>) {
+fn loose(trigger: Trigger<OnAdd, Loose>, mut commands: Commands, server: Res<AssetServer>) {
+    commands.entity(trigger.target()).remove::<Loose>();
+
     commands.set_state(GameState::Leaderboard);
     commands.spawn(
         SamplePlayer::new(server.load("audio/pinball/1destroyed.ogg"))
@@ -167,13 +172,15 @@ pub struct AdvanceEvent {
 }
 
 fn advance(
-    _: Trigger<OnAdd, Advance>,
+    trigger: Trigger<OnAdd, Advance>,
     mut commands: Commands,
     server: Res<AssetServer>,
     mut points: ResMut<Points>,
     stage: Single<&Stage>,
     mut writer: EventWriter<AdvanceEvent>,
 ) {
+    commands.entity(trigger.target()).remove::<Advance>();
+
     writer.write(AdvanceEvent {
         points: points.get(),
         level: stage.level - 1,

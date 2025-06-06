@@ -53,8 +53,22 @@ impl Plugin for FeaturesPlugin {
 #[require(Bonks::Unlimited, BonkImpulse(1.), Points(0), CollisionEventsEnabled)]
 pub struct Feature;
 
-#[derive(Component)]
-pub struct Prob(pub f32);
+#[derive(Clone, Copy, Component)]
+pub enum Rarity {
+    Common,
+    Uncommon,
+    Rare,
+}
+
+impl Rarity {
+    pub fn as_prob(&self, rare_offset: f32) -> f32 {
+        match self {
+            Self::Common => 1.,
+            Self::Uncommon => 0.5,
+            Self::Rare => 0.2 + rare_offset,
+        }
+    }
+}
 
 #[derive(Component, Clone)]
 pub struct FeatureSpawner(pub Arc<dyn Fn(&mut EntityCommands) + Send + Sync>);
@@ -100,13 +114,13 @@ impl Tooltips {
 }
 
 pub fn spawn_feature_list(mut commands: Commands) {
-    commands.spawn((Bumper, Prob(1.), feature_bundle()));
-    commands.spawn((MoneyBumper, Prob(1.), feature_bundle()));
-    commands.spawn((BingBong, Prob(1.), feature_bundle()));
-    commands.spawn((Dispenser, Prob(1.), feature_bundle()));
-    commands.spawn((Splitter, Prob(1.), feature_bundle()));
-    commands.spawn((Lotto, Prob(1.), feature_bundle()));
-    commands.spawn((FieldInverter, Prob(1.), feature_bundle()));
+    commands.spawn((Bumper, Rarity::Common, feature_bundle()));
+    commands.spawn((MoneyBumper, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((BingBong, Rarity::Common, feature_bundle()));
+    commands.spawn((Dispenser, Rarity::Common, feature_bundle()));
+    commands.spawn((Splitter, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((Lotto, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((FieldInverter, Rarity::Rare, feature_bundle()));
 }
 
 fn feature_bundle() -> impl Bundle {
