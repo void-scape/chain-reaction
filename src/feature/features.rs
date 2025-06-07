@@ -84,7 +84,7 @@ pub fn spawn_feature_list(mut commands: Commands) {
     commands.spawn((MoneyBumper, Rarity::Uncommon, feature_bundle()));
     commands.spawn((BingBong, Rarity::Common, feature_bundle()));
     commands.spawn((Dispenser, Rarity::Common, feature_bundle()));
-    commands.spawn((Splitter, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((Splitter::default(), Rarity::Uncommon, feature_bundle()));
     commands.spawn((Lotto, Rarity::Uncommon, feature_bundle()));
     commands.spawn((FieldInverter, Rarity::Rare, feature_bundle()));
 }
@@ -284,7 +284,7 @@ pub fn lotto(
 }
 
 /// Consumes ball, produces two new balls.
-#[derive(Default, Component, Reflect)]
+#[derive(Component, Reflect)]
 #[require(
     Feature,
     FeatureSpawner::new::<Self>(),
@@ -293,23 +293,34 @@ pub fn lotto(
     DebugCircle::color(FEATURE_RADIUS - 2., BLUE),
     Collider::circle(FEATURE_RADIUS - 2.)
 )]
-pub struct Splitter;
+pub struct Splitter(usize);
+
+impl Default for Splitter {
+    fn default() -> Self {
+        Self(10)
+    }
+}
 
 pub fn splitter(
     trigger: Trigger<OnCollisionStart>,
     balls: Query<(Entity, &GlobalTransform, &LinearVelocity), With<BallComponents>>,
     filtered: Query<&FeatureCooldown<Splitter>>,
-    transforms: Query<&GlobalTransform, With<Splitter>>,
+    mut transforms: Query<(&mut Splitter, &GlobalTransform)>,
     mut commands: Commands,
 ) {
     if filtered.contains(trigger.collider) {
         return;
     }
 
-    if let (Ok(feature), Ok((entity, ball, velocity))) = (
-        transforms.get(trigger.target()),
+    if let (Ok((mut count, feature)), Ok((entity, ball, velocity))) = (
+        transforms.get_mut(trigger.target()),
         balls.get(trigger.collider),
     ) {
+        if count.0 == 0 {
+            return;
+        }
+        count.0 -= 1;
+
         let feature = feature.compute_transform();
         let ball = ball.translation().xy();
 

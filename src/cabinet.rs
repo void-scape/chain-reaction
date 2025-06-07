@@ -42,7 +42,7 @@ impl Plugin for CabinetPlugin {
             .add_systems(
                 Update,
                 (
-                    make_colliders,
+                    generate_trimesh_colliders,
                     update_scrolling_background,
                     points_ui,
                     money_ui,
@@ -89,7 +89,7 @@ const CABINET_SCALE: f32 = 235.0;
 #[derive(Default, Component)]
 struct Cabinet;
 
-fn make_colliders(
+fn generate_trimesh_colliders(
     meshes: Query<(Entity, &CabinetMesh), Without<Collider>>,
     mut commands: Commands,
     gltf_assets: Res<Assets<Gltf>>,
@@ -137,6 +137,78 @@ fn make_colliders(
 }
 
 pub const UIZ: f32 = 100.;
+
+// fn generate_polyline_colliders(
+//     meshes: Query<(Entity, &CabinetMesh), Without<Collider>>,
+//     mut commands: Commands,
+//     gltf_assets: Res<Assets<Gltf>>,
+//     gltf_mesh_assets: Res<Assets<bevy::gltf::GltfMesh>>,
+//     mesh_assets: Res<Assets<Mesh>>,
+// ) {
+//     for (mesh_entity, CabinetMesh { scene, mesh }) in &meshes {
+//         let Some(mesh_data) = gltf_assets.get(scene) else {
+//             continue;
+//         };
+//
+//         let plane = &mesh_data.named_meshes[*mesh];
+//         let Some(mesh) = gltf_mesh_assets.get(plane) else {
+//             continue;
+//         };
+//         let Some(mesh) = mesh_assets.get(&mesh.primitives[0].mesh) else {
+//             return;
+//         };
+//
+//         let vertex_size = mesh.get_vertex_size() as usize;
+//         let data = mesh.create_packed_vertex_buffer_data();
+//
+//         let index_buffer: Vec<_> = match mesh.indices().unwrap() {
+//             bevy::render::mesh::Indices::U32(u32) => u32.clone(),
+//             bevy::render::mesh::Indices::U16(u16) => u16.iter().map(|u| *u as u32).collect(),
+//         };
+//         let mut vertices = Vec::with_capacity(data.len() / vertex_size);
+//         for vertex in data.chunks_exact(vertex_size) {
+//             let x = f32::from_le_bytes(vertex[0..4].try_into().unwrap());
+//             // let y = f32::from_le_bytes(vertex[4..8]);
+//             let z = -f32::from_le_bytes(vertex[8..12].try_into().unwrap());
+//
+//             vertices.push(Vec2::new(x, z) * CABINET_SCALE);
+//         }
+//
+//         info_once!("vertex size: {:#?}", vertices);
+//
+//         // let format = mesh.
+//
+//         // let vertex_buffer = mesh
+//         //     .triangles()
+//         //     .unwrap()
+//         //     .flat_map(|t| t.vertices)
+//         //     .map(|v| {
+//         //         let mut twod = v.xz() * CABINET_SCALE;
+//         //         twod.y *= -1.0;
+//         //         twod
+//         //     })
+//         //     .collect::<Vec<_>>();
+//         // let index_buffer = (0..vertex_buffer.len() as u32 / 3)
+//         //     .map(|i| {
+//         //         let start = i * 3;
+//         //         [start, start + 1, start + 2]
+//         //     })
+//         //     .collect::<Vec<_>>();
+//         //
+//         let mut pairs = Vec::new();
+//         for indices in index_buffer.windows(2) {
+//             pairs.push([indices[0], indices[1]]);
+//         }
+//
+//         let collider = Collider::polyline(vertices, Some(pairs));
+//
+//         let aabb = collider.aabb(Vec2::default(), Quat::default());
+//         let size = aabb.size();
+//         info_once!("aabb size: {:#?}", size);
+//
+//         commands.entity(mesh_entity).insert(collider);
+//     }
+// }
 
 #[derive(Component)]
 struct PointsUI;
@@ -248,6 +320,9 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
     //));
 
     let cabinet_transform = Transform::from_xyz(0., crate::HEIGHT * 0.15, CABZ);
+    let restitution = Restitution::new(0.25).with_combine_rule(CoefficientCombine::Multiply);
+    let friction = Friction::new(0.1).with_combine_rule(CoefficientCombine::Multiply);
+    let margin = CollisionMargin(0.);
 
     commands.spawn((
         Cabinet,
@@ -258,6 +333,9 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
             mesh: "Cabinet",
         },
         cabinet_transform,
+        restitution,
+        friction,
+        margin,
     ));
 
     commands.spawn((
@@ -269,6 +347,9 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
             mesh: "LeftSling",
         },
         cabinet_transform,
+        restitution,
+        friction,
+        margin,
     ));
 
     commands.spawn((
@@ -280,6 +361,9 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
             mesh: "RightSling",
         },
         cabinet_transform,
+        restitution,
+        friction,
+        margin,
     ));
 
     commands.spawn((
@@ -291,6 +375,9 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
             mesh: "LeftChannel",
         },
         cabinet_transform,
+        restitution,
+        friction,
+        margin,
     ));
 
     commands.spawn((
@@ -302,6 +389,9 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
             mesh: "RightChannel",
         },
         cabinet_transform,
+        restitution,
+        friction,
+        margin,
     ));
 }
 

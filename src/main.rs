@@ -35,6 +35,7 @@ mod state;
 mod text;
 mod tooltips;
 mod tween;
+mod music;
 
 pub const WIDTH: f32 = 750.;
 pub const HEIGHT: f32 = 750.;
@@ -105,6 +106,7 @@ fn main() {
         tooltips::TooltipPlugin,
         slugger::SluggerPlugin,
         cursor::CursorPlugin,
+        music::MusicPlugin,
     ))
     .add_plugins((
         bevy_egui::EguiPlugin {

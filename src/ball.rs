@@ -50,6 +50,7 @@ pub struct Ball;
     BallComponents,
     DebugCircle::color(8., YELLOW),
     ParticleBundle = Self::particles(),
+    SweptCcd,
 )]
 pub struct PlayerBall;
 
