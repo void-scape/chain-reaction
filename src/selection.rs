@@ -244,9 +244,8 @@ fn select_feature(
     commands.spawn(SelectedFeature(selected_feature.clone()));
     if !sandbox::ENABLED {
         for entity in selection_entities.iter() {
-            commands
-                .entity(entity)
-                .insert_recursive::<Children>(Disabled);
+            commands.entity(entity).despawn();
+            //.insert_recursive::<Children>(Disabled);
         }
     }
 }

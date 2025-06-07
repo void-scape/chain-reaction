@@ -28,6 +28,7 @@ mod particles;
 mod sampler;
 mod sandbox;
 mod selection;
+mod slugger;
 mod stage;
 mod state;
 mod text;
@@ -99,7 +100,11 @@ fn main() {
             leaderboard::LeaderBoardPlugin,
             selection::SelectionPlugin,
         ))
-        .add_plugins((sandbox::SandboxPlugin, tooltips::TooltipPlugin))
+        .add_plugins((
+            sandbox::SandboxPlugin,
+            tooltips::TooltipPlugin,
+            slugger::SluggerPlugin,
+        ))
         .add_plugins((
             bevy_egui::EguiPlugin {
                 enable_multipass_for_primary_context: true,

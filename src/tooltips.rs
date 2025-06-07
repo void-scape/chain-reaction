@@ -49,7 +49,17 @@ impl Tooltips {
 }
 
 #[derive(Component)]
+#[component(on_remove = Self::despawn)]
 struct Hovered(Entity);
+
+impl Hovered {
+    fn despawn(mut world: DeferredWorld, ctx: HookContext) {
+        let entity = world.get::<Hovered>(ctx.entity).unwrap().0;
+        if let Ok(mut entity) = world.commands().get_entity(entity) {
+            entity.try_despawn();
+        }
+    }
+}
 
 const HOVERZ: f32 = 800.;
 
@@ -59,7 +69,7 @@ fn hover(
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
 
     targets: Query<(Entity, &Tooltips, &GlobalTransform, &Collider), Without<Hovered>>,
-    hovered: Query<(Entity, &Hovered, &GlobalTransform, &Collider)>,
+    hovered: Query<(Entity, &GlobalTransform, &Collider), With<Hovered>>,
 ) {
     let (camera, gt) = camera.into_inner();
     let Some(world_position) = window
@@ -91,11 +101,10 @@ fn hover(
         }
     }
 
-    for (entity, hovered, gt, collider) in hovered.iter() {
+    for (entity, gt, collider) in hovered.iter() {
         let position = gt.translation().xy();
         if !collider.contains_point(position, gt.rotation(), world_position) {
             commands.entity(entity).remove::<Hovered>();
-            commands.entity(hovered.0).despawn();
         }
     }
 }

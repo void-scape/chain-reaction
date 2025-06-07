@@ -7,7 +7,7 @@ use crate::feature::{FeatureSpawner, spawn_feature_list};
 use crate::selection::{SelectedFeature, SelectionFeature};
 use crate::state::{GameState, Playing};
 
-pub const ENABLED: bool = true;
+pub const ENABLED: bool = false;
 
 const CAM_OFFSET: f32 = crate::WIDTH / 3.;
 

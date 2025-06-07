@@ -121,7 +121,7 @@ fn stage(
                 PlayerBall,
                 Transform::from_xyz(
                     -crate::cabinet::WIDTH / 2. + 80.,
-                    crate::HEIGHT / 2. - 20.,
+                    crate::cabinet::HEIGHT / 2. - 60.,
                     0.,
                 ),
             ));
