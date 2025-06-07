@@ -43,12 +43,13 @@ impl Plugin for FeaturesPlugin {
             .add_observer(splitter)
             .add_observer(lotto)
             .add_observer(field_inverter)
-            .add_observer(field_inversion);
+            .add_observer(field_inversion)
+            .add_observer(redirect);
     }
 }
 
 #[derive(Default, Clone, Component)]
-#[require(Bonks::Unlimited, BonkImpulse(1.), Points(0), CollisionEventsEnabled)]
+#[require(Bonks::Unlimited, Points(0), CollisionEventsEnabled)]
 pub struct Feature;
 
 #[derive(Clone, Copy, Component)]
@@ -86,6 +87,10 @@ pub fn spawn_feature_list(mut commands: Commands) {
     commands.spawn((Dispenser, Rarity::Common, feature_bundle()));
     commands.spawn((Splitter::default(), Rarity::Uncommon, feature_bundle()));
     commands.spawn((Lotto, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((NorthWestRedirector, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((NorthEastRedirector, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((SouthWestRedirector, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((SouthEastRedirector, Rarity::Uncommon, feature_bundle()));
     commands.spawn((FieldInverter, Rarity::Rare, feature_bundle()));
 }
 
@@ -212,6 +217,7 @@ pub fn kaching(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    BonkImpulse(1.),
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     Points(10),
@@ -253,6 +259,80 @@ pub fn dispense(
     }
 }
 
+#[derive(Default, Component, Reflect)]
+#[require(Collider::circle(FEATURE_RADIUS), Sensor)]
+pub struct Redirector(Vec2);
+
+pub fn redirect(
+    trigger: Trigger<OnCollisionStart>,
+    mut balls: Query<
+        (&mut Transform, &mut LinearVelocity, &GlobalTransform),
+        Or<(With<Ball>, With<PlayerBall>)>,
+    >,
+    transforms: Query<(&Redirector, &GlobalTransform)>,
+) {
+    if let (Ok((direction, feature)), Ok((mut ball_local, mut velocity, ball))) = (
+        transforms.get(trigger.target()),
+        balls.get_mut(trigger.collider),
+    ) {
+        let feature = feature.compute_transform();
+        let ball = ball.translation().xy();
+
+        // set to middle of redirector
+        let difference = feature.translation.xy() - ball;
+        ball_local.translation.x += difference.x;
+        ball_local.translation.y += difference.y;
+
+        // give exact velocity
+        let magnitude = 500.0;
+        velocity.0 = direction.0 * magnitude;
+    }
+}
+
+/// Redirect balls north-west.
+#[derive(Default, Component, Reflect)]
+#[require(
+    Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
+    DebugCircle::color(FEATURE_RADIUS, GREEN),
+    Redirector(Vec2::from_angle(PI * 0.75)),
+)]
+pub struct NorthWestRedirector;
+
+/// Redirect balls north-east.
+#[derive(Default, Component, Reflect)]
+#[require(
+    Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
+    DebugCircle::color(FEATURE_RADIUS, GREEN),
+    Redirector(Vec2::from_angle(PI * 0.25)),
+)]
+pub struct NorthEastRedirector;
+
+/// Redirect balls south-west.
+#[derive(Default, Component, Reflect)]
+#[require(
+    Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
+    DebugCircle::color(FEATURE_RADIUS, GREEN),
+    Redirector(Vec2::from_angle(PI * 1.25)),
+)]
+pub struct SouthWestRedirector;
+
+/// Redirect balls south-east.
+#[derive(Default, Component, Reflect)]
+#[require(
+    Feature,
+    FeatureSpawner::new::<Self>(),
+    Tooltips::new::<Self>(),
+    DebugCircle::color(FEATURE_RADIUS, GREEN),
+    Redirector(Vec2::from_angle(PI * 1.75)),
+)]
+pub struct SouthEastRedirector;
+
 /// Loose $1 when bonked. Every bonk has a 1 in 5 chance to produce $7.
 #[derive(Default, Component, Reflect)]
 #[require(
@@ -287,6 +367,7 @@ pub fn lotto(
 #[derive(Component, Reflect)]
 #[require(
     Feature,
+    BonkImpulse(1.),
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     Points(10),
@@ -361,6 +442,7 @@ pub fn splitter(
 #[derive(Default, Component, Reflect)]
 #[require(
     Feature,
+    BonkImpulse(1.),
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     DebugCircle::color(FEATURE_RADIUS - 2., MAROON),
