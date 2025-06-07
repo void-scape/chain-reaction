@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy_optix::debug::debug_single;
 use bevy_seedling::prelude::*;
 
 use crate::ball::{BallComponents, PlayerBall};
@@ -18,17 +17,22 @@ impl Plugin for StagePlugin {
         app.add_event::<AdvanceEvent>()
             .add_reset(remove_entities::<With<Stage>>)
             .add_systems(OnEnter(GameState::StartGame), spawn_stage)
-            .add_systems(
+            .configure_sets(PreUpdate, StageSet.in_set(Playing));
+
+        if !sandbox::ENABLED {
+            app.add_systems(PreUpdate, stage.in_set(StageSet));
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            use bevy_optix::debug::debug_single;
+            app.add_systems(
                 Update,
                 debug_single::<Stage>(
                     Transform::from_xyz(-crate::RES_WIDTH / 2., -crate::RES_HEIGHT / 2., 500.),
                     Anchor::BottomLeft,
                 ),
-            )
-            .configure_sets(PreUpdate, StageSet.in_set(Playing));
-
-        if !sandbox::ENABLED {
-            app.add_systems(PreUpdate, stage.in_set(StageSet));
+            );
         }
     }
 }

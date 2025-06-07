@@ -3,7 +3,6 @@ use std::{f32::consts::PI, time::Duration};
 use avian2d::prelude::*;
 use bevy::{prelude::*, time::Stopwatch};
 use bevy_enhanced_input::events::Fired;
-use bevy_optix::debug::debug_single;
 use bevy_seedling::{
     prelude::Volume,
     sample::{PitchRange, SamplePlayer},
@@ -29,7 +28,18 @@ impl Plugin for PaddlePlugin {
                 remove_entities::<With<Paddle>>,
                 remove_entities::<With<PaddleRest>>,
             ))
-            .add_systems(
+            .add_systems(OnEnter(GameState::StartGame), spawn_paddles)
+            .add_systems(OnEnter(GameState::Playing), start_paddle_rest)
+            .add_systems(OnExit(GameState::Playing), stop_paddle_rest)
+            .add_systems(Update, paddle_rest)
+            .add_systems(Avian, paddles.before(PhysicsSet::Prepare))
+            .add_observer(apply_pressed)
+            .add_observer(apply_released);
+
+        #[cfg(debug_assertions)]
+        {
+            use bevy_optix::debug::debug_single;
+            app.add_systems(
                 Update,
                 debug_single::<PaddleRest>(
                     Transform::from_xyz(
@@ -39,14 +49,8 @@ impl Plugin for PaddlePlugin {
                     ),
                     bevy::sprite::Anchor::BottomLeft,
                 ),
-            )
-            .add_systems(OnEnter(GameState::StartGame), spawn_paddles)
-            .add_systems(OnEnter(GameState::Playing), start_paddle_rest)
-            .add_systems(OnExit(GameState::Playing), stop_paddle_rest)
-            .add_systems(Update, paddle_rest)
-            .add_systems(Avian, paddles.before(PhysicsSet::Prepare))
-            .add_observer(apply_pressed)
-            .add_observer(apply_released);
+            );
+        }
     }
 }
 

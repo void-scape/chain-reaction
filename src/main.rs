@@ -18,6 +18,7 @@ use winit::window::Icon;
 mod ball;
 mod cabinet;
 mod collectables;
+mod cursor;
 mod feature;
 mod input;
 mod leaderboard;
@@ -50,71 +51,71 @@ fn main() {
     #[cfg(debug_assertions)]
     app.add_systems(Update, close_on_escape);
 
-    app.insert_resource(ClearColor(Color::linear_rgb(0.4, 0.4, 0.4)))
-        .add_plugins((
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        // TODO: Rename
-                        title: "Bevy game".to_string(),
-                        fit_canvas_to_parent: true,
-                        resolution: WindowResolution::new(
-                            WIDTH * RESOLUTION_SCALE * 1.5,
-                            HEIGHT * RESOLUTION_SCALE,
-                        ),
-                        ..default()
-                    }),
+    app.add_plugins((
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    // TODO: Rename
+                    title: "Bevy game".to_string(),
+                    fit_canvas_to_parent: true,
+                    resolution: WindowResolution::new(
+                        WIDTH * RESOLUTION_SCALE * 1.5,
+                        HEIGHT * RESOLUTION_SCALE,
+                    ),
                     ..default()
-                })
-                .set(AssetPlugin {
-                    meta_check: AssetMetaCheck::Never,
-                    ..default()
-                })
-                .set(ImagePlugin::default_nearest()),
-            bevy_tween::DefaultTweenPlugins,
-            bevy_enhanced_input::EnhancedInputPlugin,
-            avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
-            bevy_optix::pixel_perfect::PixelPerfectPlugin(CanvasDimensions {
-                width: (WIDTH * 1.5) as u32,
-                height: HEIGHT as u32,
-                pixel_scale: RESOLUTION_SCALE,
-            }),
-            bevy_optix::debug::DebugPlugin,
-            bevy_enoki::EnokiPlugin,
-            bevy_light_2d::prelude::Light2dPlugin,
-        ))
-        .add_plugins((
-            loading::LoadingPlugin,
-            menu::MenuPlugin,
-            paddle::PaddlePlugin,
-            ball::BallPlugin,
-            feature::FeaturePlugin,
-            particles::ParticlePlugin,
-            input::InputPlugin,
-            cabinet::CabinetPlugin,
-            text::TextPlugin,
-            collectables::CollectablePlugin,
-            tween::TweenPlugin,
-            state::StatePlugin,
-            stage::StagePlugin,
-            leaderboard::LeaderBoardPlugin,
-            selection::SelectionPlugin,
-        ))
-        .add_plugins((
-            sandbox::SandboxPlugin,
-            tooltips::TooltipPlugin,
-            slugger::SluggerPlugin,
-        ))
-        .add_plugins((
-            bevy_egui::EguiPlugin {
-                enable_multipass_for_primary_context: true,
-            },
-            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
-            avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
-        ))
-        .init_schedule(Avian)
-        .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
-        .add_systems(Startup, set_window_icon);
+                }),
+                ..default()
+            })
+            .set(AssetPlugin {
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            })
+            .set(ImagePlugin::default_nearest()),
+        bevy_tween::DefaultTweenPlugins,
+        bevy_enhanced_input::EnhancedInputPlugin,
+        avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
+        bevy_optix::pixel_perfect::PixelPerfectPlugin(CanvasDimensions {
+            width: (WIDTH * 1.5) as u32,
+            height: HEIGHT as u32,
+            pixel_scale: RESOLUTION_SCALE,
+        }),
+        bevy_optix::debug::DebugPlugin,
+        bevy_enoki::EnokiPlugin,
+        bevy_light_2d::prelude::Light2dPlugin,
+    ))
+    .add_plugins((
+        loading::LoadingPlugin,
+        menu::MenuPlugin,
+        paddle::PaddlePlugin,
+        ball::BallPlugin,
+        feature::FeaturePlugin,
+        particles::ParticlePlugin,
+        input::InputPlugin,
+        cabinet::CabinetPlugin,
+        text::TextPlugin,
+        collectables::CollectablePlugin,
+        tween::TweenPlugin,
+        state::StatePlugin,
+        stage::StagePlugin,
+        leaderboard::LeaderBoardPlugin,
+        selection::SelectionPlugin,
+    ))
+    .add_plugins((
+        sandbox::SandboxPlugin,
+        tooltips::TooltipPlugin,
+        slugger::SluggerPlugin,
+        cursor::CursorPlugin,
+    ))
+    .add_plugins((
+        bevy_egui::EguiPlugin {
+            enable_multipass_for_primary_context: true,
+        },
+        //bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+        avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
+    ))
+    .init_schedule(Avian)
+    .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
+    .add_systems(Startup, set_window_icon);
 
     #[cfg(target_arch = "wasm32")]
     use bevy_seedling::prelude::*;

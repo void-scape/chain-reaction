@@ -1,6 +1,14 @@
+use std::time::Duration;
+
+use crate::collectables::HexColor;
 use crate::loading::TextureAssets;
 use crate::state::{self, GameState};
 use bevy::prelude::*;
+use bevy_optix::pixel_perfect::HIGH_RES_LAYER;
+use bevy_tween::combinator::{sequence, tween};
+use bevy_tween::interpolate::sprite_color;
+use bevy_tween::prelude::{AnimationBuilderExt, EaseKind, Repeat};
+use bevy_tween::tween::IntoTarget;
 
 pub struct MenuPlugin;
 
@@ -30,7 +38,7 @@ impl Default for ButtonColors {
 #[derive(Component)]
 struct Menu;
 
-fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
+fn setup_menu(mut commands: Commands, server: Res<AssetServer>) {
     commands.spawn((Camera2d, Msaa::Off));
     commands
         .spawn((
@@ -61,7 +69,7 @@ fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
                     ChangeState(GameState::StartGame),
                 ))
                 .with_child((
-                    Text::new("Play"),
+                    Text::new("Enter?"),
                     TextFont {
                         font_size: 40.0,
                         ..default()
@@ -69,94 +77,53 @@ fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
                     TextColor(Color::linear_rgb(0.9, 0.9, 0.9)),
                 ));
         });
-    commands
+
+    commands.spawn((
+        Menu,
+        HIGH_RES_LAYER,
+        Transform::from_scale(Vec3::splat(crate::RESOLUTION_SCALE)),
+        Sprite::from_image(server.load("textures/menu_back.png")),
+    ));
+
+    let light = commands
         .spawn((
-            Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceAround,
-                bottom: Val::Px(5.),
-                width: Val::Percent(100.),
-                position_type: PositionType::Absolute,
-                ..default()
-            },
             Menu,
+            HIGH_RES_LAYER,
+            Transform::from_scale(Vec3::splat(crate::RESOLUTION_SCALE)).with_translation(Vec3::Z),
+            Sprite::from_image(server.load("textures/menu_lights.png")),
         ))
-        .with_children(|children| {
-            children
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(170.0),
-                        height: Val::Px(50.0),
-                        justify_content: JustifyContent::SpaceAround,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::all(Val::Px(5.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::NONE),
-                    ButtonColors {
-                        normal: Color::NONE,
-                        ..default()
-                    },
-                    OpenLink("https://bevyengine.org"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Made with Bevy"),
-                        TextFont {
-                            font_size: 15.0,
-                            ..default()
-                        },
-                        TextColor(Color::linear_rgb(0.9, 0.9, 0.9)),
-                    ));
-                    parent.spawn((
-                        ImageNode {
-                            image: textures.bevy.clone(),
-                            ..default()
-                        },
-                        Node {
-                            width: Val::Px(32.),
-                            ..default()
-                        },
-                    ));
-                });
-            children
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(170.0),
-                        height: Val::Px(50.0),
-                        justify_content: JustifyContent::SpaceAround,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::all(Val::Px(5.)),
-                        ..default()
-                    },
-                    BackgroundColor(Color::NONE),
-                    ButtonColors {
-                        normal: Color::NONE,
-                        hovered: Color::linear_rgb(0.25, 0.25, 0.25),
-                    },
-                    OpenLink("https://github.com/NiklasEi/bevy_game_template"),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Open source"),
-                        TextFont {
-                            font_size: 15.0,
-                            ..default()
-                        },
-                        TextColor(Color::linear_rgb(0.9, 0.9, 0.9)),
-                    ));
-                    parent.spawn((
-                        ImageNode::new(textures.github.clone()),
-                        Node {
-                            width: Val::Px(32.),
-                            ..default()
-                        },
-                    ));
-                });
-        });
+        .id();
+
+    let red: Color = HexColor(0xb4202a).into();
+    let orange: Color = HexColor(0xfa6a0a).into();
+    let purple: Color = HexColor(0xbc4a9b).into();
+
+    let a = 0.5;
+    let red = red.with_alpha(a);
+    let orange = orange.with_alpha(a);
+    let purple = purple.with_alpha(a);
+
+    commands
+        .entity(light)
+        .animation()
+        .repeat(Repeat::Infinitely)
+        .insert(sequence((
+            tween(
+                Duration::from_secs_f32(1.),
+                EaseKind::SineInOut,
+                light.into_target().with(sprite_color(red, orange)),
+            ),
+            tween(
+                Duration::from_secs_f32(1.),
+                EaseKind::SineInOut,
+                light.into_target().with(sprite_color(orange, purple)),
+            ),
+            tween(
+                Duration::from_secs_f32(1.),
+                EaseKind::SineInOut,
+                light.into_target().with(sprite_color(purple, red)),
+            ),
+        )));
 }
 
 #[derive(Component)]

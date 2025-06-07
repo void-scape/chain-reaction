@@ -2,7 +2,6 @@ use crate::RESOLUTION_SCALE;
 use crate::state::{StateAppExt, insert_resource};
 use crate::text::flash_text_rotate;
 use bevy::prelude::*;
-use bevy_optix::debug::debug_res;
 use bevy_seedling::prelude::*;
 use rand::Rng;
 use std::f32::consts::PI;
@@ -23,8 +22,12 @@ impl Plugin for CollectablePlugin {
             .add_event::<MoneyEvent>()
             .insert_resource(Points(0))
             .insert_resource(Money(0))
-            .add_systems(PostUpdate, effects)
-            .add_systems(
+            .add_systems(PostUpdate, effects);
+
+        #[cfg(debug_assertions)]
+        {
+            use bevy_optix::debug::debug_res;
+            app.add_systems(
                 Update,
                 (
                     debug_res::<Money>(
@@ -45,6 +48,7 @@ impl Plugin for CollectablePlugin {
                     ),
                 ),
             );
+        }
     }
 }
 
@@ -81,6 +85,12 @@ pub struct PointEvent {
 
 #[derive(Debug, Clone, Resource)]
 pub struct Money(i32);
+
+impl Money {
+    pub fn get(&self) -> i32 {
+        self.0
+    }
+}
 
 #[derive(Event)]
 pub struct MoneyEvent {
