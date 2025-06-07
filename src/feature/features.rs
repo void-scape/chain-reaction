@@ -4,10 +4,7 @@ use std::sync::Arc;
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{BLUE, GREEN, MAROON, PURPLE, RED, YELLOW};
 use bevy::color::palettes::tailwind::CYAN_700;
-use bevy::ecs::component::HookContext;
-use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
-use bevy::reflect::Typed;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
@@ -17,6 +14,7 @@ use crate::collectables::{MoneyEvent, PointEvent};
 use crate::paddle::PaddleBonk;
 use crate::sampler::Sampler;
 use crate::state::{GameState, Playing};
+use crate::tooltips::Tooltips;
 
 use super::{BonkImpulse, Bonks, FeatureCooldown, Points, feature_cooldown};
 
@@ -78,38 +76,6 @@ impl FeatureSpawner {
         Self(Arc::new(|commands: &mut EntityCommands| {
             commands.insert(T::default());
         }))
-    }
-}
-
-#[derive(Default, Component)]
-#[require(Transform, Visibility::Visible)]
-#[component(on_insert = Self::on_insert_hook)]
-pub struct Tooltips {
-    pub name: &'static str,
-    pub desc: &'static str,
-}
-
-impl Tooltips {
-    fn on_insert_hook(mut world: DeferredWorld, ctx: HookContext) {
-        let entity = world.get::<Tooltips>(ctx.entity).unwrap();
-        let name = entity.name;
-
-        world.commands().entity(ctx.entity).insert(Name::new(name));
-    }
-}
-
-impl Tooltips {
-    pub fn new<T: Typed>() -> Self {
-        Self::named::<T>(T::type_ident().unwrap())
-    }
-
-    pub fn named<T: Typed>(name: &'static str) -> Self {
-        Self {
-            name,
-            desc: T::type_info()
-                .docs()
-                .expect("`Feature` has no documentation"),
-        }
     }
 }
 

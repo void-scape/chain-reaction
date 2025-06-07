@@ -18,20 +18,20 @@ use winit::window::Icon;
 mod ball;
 mod cabinet;
 mod collectables;
+mod feature;
 mod input;
 mod leaderboard;
 mod loading;
 mod menu;
 mod paddle;
 mod particles;
+mod sampler;
 mod sandbox;
 mod selection;
-//mod queue;
-mod feature;
-mod sampler;
 mod stage;
 mod state;
 mod text;
+mod tooltips;
 mod tween;
 
 pub const WIDTH: f32 = 750.;
@@ -99,7 +99,7 @@ fn main() {
             leaderboard::LeaderBoardPlugin,
             selection::SelectionPlugin,
         ))
-        .add_plugins((sandbox::SandboxPlugin,))
+        .add_plugins((sandbox::SandboxPlugin, tooltips::TooltipPlugin))
         .add_plugins((
             bevy_egui::EguiPlugin {
                 enable_multipass_for_primary_context: true,

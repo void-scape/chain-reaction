@@ -6,10 +6,11 @@ use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 use convert_case::{Case, Casing};
 
 use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
-use crate::feature::{Feature, FeatureSpawner, Rarity, Tooltips};
+use crate::feature::{Feature, FeatureSpawner, Rarity};
 use crate::sandbox;
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
+use crate::tooltips::Tooltips;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct SelectionSet;

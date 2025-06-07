@@ -1,15 +1,12 @@
 use avian2d::prelude::*;
-use bevy::color::palettes::css::GREY;
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::prelude::*;
 use bevy_light_2d::light::{AmbientLight2d, PointLight2d};
 use bevy_optix::camera::MainCamera;
-use bevy_optix::debug::DebugRect;
 use bevy_optix::post_process::PostProcessCommand;
 use bevy_tween::prelude::{AnimationBuilderExt, EaseKind, Repeat};
 use bevy_tween::tween::IntoTarget;
 use bevy_tween::{BevyTweenRegisterSystems, component_tween_system};
-use std::f32::consts::PI;
 use std::time::Duration;
 
 use crate::collectables::HexColor;
@@ -105,56 +102,6 @@ fn make_colliders(
 }
 
 fn spawn_edges(mut commands: Commands, server: Res<AssetServer>) {
-    let x = 160.;
-    let y = 130.;
-
-    let w = 180.;
-    let h = 15.;
-
-    let rot = PI / 4.5;
-
-    // // walls
-    // commands.spawn((
-    //     RigidBody::Static,
-    //     Restitution::new(0.7),
-    //     Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
-    //     DebugRect::from_size_color(Vec2::new(w, h), GREY),
-    //     Collider::rectangle(w, h),
-    //     Rotation::radians(-rot),
-    //     CollisionEventsEnabled,
-    // ));
-    //
-    // commands.spawn((
-    //     RigidBody::Static,
-    //     Restitution::new(0.7),
-    //     Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
-    //     DebugRect::from_size_color(Vec2::new(w, h), GREY),
-    //     Collider::rectangle(w, h),
-    //     Rotation::radians(rot),
-    //     CollisionEventsEnabled,
-    // ));
-
-    let x = 65. + x;
-    let y = 150. + y;
-
-    let hh = 1000.;
-
-    // commands.spawn((
-    //     RigidBody::Static,
-    //     Transform::from_xyz(-x, -crate::HEIGHT / 2. + y, CABZ),
-    //     DebugRect::from_size_color(Vec2::new(h, hh), GREY),
-    //     Collider::rectangle(h, hh),
-    //     CollisionEventsEnabled,
-    // ));
-    //
-    // commands.spawn((
-    //     RigidBody::Static,
-    //     Transform::from_xyz(x, -crate::HEIGHT / 2. + y, CABZ),
-    //     DebugRect::from_size_color(Vec2::new(h, hh), GREY),
-    //     Collider::rectangle(h, hh),
-    //     CollisionEventsEnabled,
-    // ));
-
     spawn_light(
         &mut commands,
         //Vec2::new(-x, 0.),
@@ -167,14 +114,6 @@ fn spawn_edges(mut commands: Commands, server: Res<AssetServer>) {
         //-PI / 4. + PI,
         HexColor(0x4a2480),
     );
-
-    // commands.spawn((
-    //     RigidBody::Static,
-    //     Transform::from_xyz(0., crate::HEIGHT / 2., CABZ),
-    //     DebugRect::from_size_color(Vec2::new(hh, 50.), GREY),
-    //     Collider::rectangle(hh, 50.),
-    //     CollisionEventsEnabled,
-    // ));
 
     let cabinet_transform = Transform::from_xyz(0., crate::HEIGHT * 0.15, CABZ);
 
