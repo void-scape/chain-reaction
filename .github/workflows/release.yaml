@@ -16,8 +16,7 @@ env:
   # This variable is used to name release output files.
   GAME_EXECUTABLE_NAME: bevy_template
   GAME_OSX_APP_NAME: BevyGame
-
-  itch_target: starzzes/test
+  itch_target: starzzes/slugger
 
 permissions:
   contents: write
