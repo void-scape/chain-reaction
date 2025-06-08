@@ -41,8 +41,7 @@ struct PlayerData {
 }
 
 fn player_data(mut commands: Commands) {
-    // TODO: Rename
-    let element = "chainreaction1";
+    let element = "slugball-player-data";
     let config_dir = dirs::config_dir()
         .map(|native_config_dir| native_config_dir.join(element))
         .unwrap_or_else(|| std::path::Path::new("local").join(element));

@@ -59,8 +59,7 @@ fn main() {
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    // TODO: Rename
-                    title: "Bevy game".to_string(),
+                    title: "Slugball".to_string(),
                     fit_canvas_to_parent: true,
                     resolution: WindowResolution::new(
                         WIDTH * RESOLUTION_SCALE * 1.5,
