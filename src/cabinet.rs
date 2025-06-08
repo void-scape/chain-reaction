@@ -13,14 +13,14 @@ use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
 use bevy_optix::post_process::PostProcessCommand;
 use bevy_tween::combinator::{sequence, tween};
 use bevy_tween::interpolate::translation;
-use bevy_tween::prelude::{AnimationBuilderExt, EaseKind, Repeat};
+use bevy_tween::prelude::{AnimationBuilderExt, EaseKind, Interpolator, Repeat};
 use bevy_tween::tween::IntoTarget;
 use bevy_tween::{BevyTweenRegisterSystems, component_tween_system};
 use std::time::Duration;
 
 use crate::collectables::{HexColor, Money, Points};
+use crate::float_tween_wrapper;
 use crate::state::{GameState, StateAppExt, remove_entities};
-use crate::{float_tween_wrapper, sandbox};
 
 pub const WIDTH: f32 = 550.;
 pub const HEIGHT: f32 = 750.;
@@ -31,7 +31,8 @@ pub struct CabinetPlugin;
 
 impl Plugin for CabinetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset(remove_entities::<With<Cabinet>>)
+        app.add_event::<TransitionFinished>()
+            .add_reset(remove_entities::<With<Cabinet>>)
             .add_plugins((
                 Material2dPlugin::<ScrollingTexture>::default(),
                 Material2dPlugin::<Diamonds>::default(),
@@ -46,20 +47,14 @@ impl Plugin for CabinetPlugin {
                     update_scrolling_background,
                     points_ui,
                     money_ui,
+                    transition_timer,
                 ),
             )
-            .add_tween_systems(component_tween_system::<PointLightIntensity>());
-
-        if !sandbox::ENABLED {
-            app.add_systems(Startup, move_camera);
-        }
+            .add_tween_systems((
+                component_tween_system::<PointLightIntensity>(),
+                component_tween_system::<PointLightColor>(),
+            ));
     }
-}
-
-const CAM_OFFSET: f32 = crate::WIDTH / 2. - 150.;
-
-fn move_camera(mut camera: Single<&mut Transform, With<OuterCamera>>) {
-    camera.translation.x += CAM_OFFSET;
 }
 
 float_tween_wrapper!(
@@ -69,10 +64,28 @@ float_tween_wrapper!(
     intensity
 );
 
+pub fn point_light_color(start: Color, end: Color) -> PointLightColor {
+    PointLightColor { start, end }
+}
+
+#[derive(Component)]
+pub struct PointLightColor {
+    start: Color,
+    end: Color,
+}
+
+impl Interpolator for PointLightColor {
+    type Item = PointLight2d;
+
+    fn interpolate(&self, item: &mut Self::Item, value: f32) {
+        item.color = self.start.mix(&self.end, value);
+    }
+}
+
 fn lighting(mut commands: Commands) {
     commands.post_process::<OuterCamera>(Bloom::NATURAL);
     commands.post_process::<MainCamera>(AmbientLight2d {
-        brightness: 0.8,
+        brightness: 0.1,
         ..Default::default()
     });
 }
@@ -533,20 +546,42 @@ impl Material2d for Diamonds {
     }
 }
 
+#[derive(Event)]
+pub struct TransitionFinished;
+
+#[derive(Component)]
+struct TransitionTimer(Timer);
+
+fn transition_timer(
+    mut commands: Commands,
+    time: Res<Time>,
+    timer: Single<(Entity, &mut TransitionTimer)>,
+    mut writer: EventWriter<TransitionFinished>,
+) {
+    let (entity, mut timer) = timer.into_inner();
+
+    timer.0.tick(time.delta());
+    if timer.0.finished() {
+        writer.write(TransitionFinished);
+        commands.entity(entity).despawn();
+    }
+}
+
 pub fn transition(mut commands: Commands, server: Res<AssetServer>) {
+    let dur = 1.;
     let mut stagger = false;
     for y in 0..1024 / 62 {
         let right = Vec3::new(
-            crate::WIDTH / 2. + 1024. + CAM_OFFSET,
+            crate::WIDTH / 2. + 1024.,
             y as f32 * 62. - crate::HEIGHT / 2.,
             980.,
         );
         let left = Vec3::new(
-            -crate::WIDTH / 2. - 1024. + CAM_OFFSET,
+            -crate::WIDTH / 2. - 1024.,
             y as f32 * 62. - crate::HEIGHT / 2.,
             980.,
         );
-        let middle = Vec3::new(CAM_OFFSET, y as f32 * 62. - crate::HEIGHT / 2., 980.);
+        let middle = Vec3::new(0., y as f32 * 62. - crate::HEIGHT / 2., 980.);
 
         let (start, end) = if stagger {
             (right, left)
@@ -558,12 +593,11 @@ pub fn transition(mut commands: Commands, server: Res<AssetServer>) {
             .spawn((
                 Cabinet,
                 HIGH_RES_LAYER,
-                Transform::from_scale(Vec3::splat(crate::RESOLUTION_SCALE)),
+                Transform::from_scale(Vec3::splat(crate::RESOLUTION_SCALE).with_z(998.)),
                 Sprite::from_image(server.load("textures/slider.png")),
             ))
             .id();
 
-        let dur = 1.5;
         let animation = commands
             .animation()
             .insert(sequence((
@@ -583,4 +617,9 @@ pub fn transition(mut commands: Commands, server: Res<AssetServer>) {
 
         stagger = !stagger;
     }
+
+    commands.spawn(TransitionTimer(Timer::from_seconds(
+        dur / 2.,
+        TimerMode::Once,
+    )));
 }

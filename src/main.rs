@@ -15,6 +15,7 @@ use bevy::winit::WinitWindows;
 use bevy_optix::pixel_perfect::CanvasDimensions;
 use winit::window::Icon;
 
+mod animation;
 mod ball;
 mod cabinet;
 mod collectables;
@@ -24,18 +25,19 @@ mod input;
 mod leaderboard;
 mod loading;
 mod menu;
+mod music;
 mod paddle;
 mod particles;
 mod sampler;
 mod sandbox;
 mod selection;
 mod slugger;
+mod sprites;
 mod stage;
 mod state;
 mod text;
 mod tooltips;
 mod tween;
-mod music;
 
 pub const WIDTH: f32 = 750.;
 pub const HEIGHT: f32 = 750.;
@@ -107,6 +109,8 @@ fn main() {
         slugger::SluggerPlugin,
         cursor::CursorPlugin,
         music::MusicPlugin,
+        animation::AnimationPlugin,
+        sprites::SpritePlugin,
     ))
     .add_plugins((
         bevy_egui::EguiPlugin {

@@ -2,8 +2,9 @@ use bevy::ecs::query::QueryFilter;
 use bevy::ecs::system::ScheduleSystem;
 use bevy::prelude::*;
 
-use crate::sandbox;
+use crate::cabinet::TransitionFinished;
 use crate::selection::{FeaturePack, SelectionEvent};
+use crate::{cabinet, sandbox};
 
 pub struct StatePlugin;
 
@@ -12,16 +13,39 @@ impl Plugin for StatePlugin {
         app.init_state::<GameState>()
             .add_systems(OnEnter(GameState::Reset), reset)
             .add_systems(OnEnter(GameState::StartGame), start)
+            .add_systems(OnEnter(GameState::ToGame), cabinet::transition)
+            .add_systems(OnEnter(GameState::ToLeaderboard), cabinet::transition)
+            .add_systems(
+                Update,
+                (
+                    enter_game.in_set(ToGame),
+                    enter_leaderboard.in_set(ToLeaderboard),
+                ),
+            )
             .state_variant::<Loading, _>(GameState::Loading)
             .state_variant::<Menu, _>(GameState::Menu)
             .state_variant::<StartGame, _>(GameState::StartGame)
             .state_variant::<Playing, _>(GameState::Playing)
             .state_variant::<Leaderboard, _>(GameState::Leaderboard)
             .state_variant::<Selection, _>(GameState::Selection)
-            .state_variant::<Reset, _>(GameState::Reset);
+            .state_variant::<Reset, _>(GameState::Reset)
+            .state_variant::<ToGame, _>(GameState::ToGame)
+            .state_variant::<ToLeaderboard, _>(GameState::ToLeaderboard);
 
         #[cfg(debug_assertions)]
         app.add_systems(Update, state);
+    }
+}
+
+fn enter_game(mut commands: Commands, mut reader: EventReader<TransitionFinished>) {
+    for _ in reader.read() {
+        commands.set_state(GameState::StartGame);
+    }
+}
+
+fn enter_leaderboard(mut commands: Commands, mut reader: EventReader<TransitionFinished>) {
+    for _ in reader.read() {
+        commands.set_state(GameState::Leaderboard);
     }
 }
 
@@ -35,6 +59,8 @@ pub enum GameState {
     Leaderboard,
     Selection,
     Reset,
+    ToGame,
+    ToLeaderboard,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, SystemSet)]
@@ -57,6 +83,12 @@ pub struct Selection;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, SystemSet)]
 pub struct Reset;
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, SystemSet)]
+pub struct ToGame;
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, SystemSet)]
+pub struct ToLeaderboard;
 
 /// Configure a [`SystemSet`] `V` to run if state is `S` for these schedules:
 ///
