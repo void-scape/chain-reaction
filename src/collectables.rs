@@ -21,13 +21,13 @@ impl Plugin for CollectablePlugin {
         app.add_reset((
             insert_resource(TotalPoints(Default::default())),
             insert_resource(Points::default()),
-            insert_resource(Money(0)),
+            insert_resource(Money(5)),
         ))
         .add_event::<PointEvent>()
         .add_event::<MoneyEvent>()
         .insert_resource(Points::default())
         .insert_resource(TotalPoints(Default::default()))
-        .insert_resource(Money(0))
+        .insert_resource(Money(5))
         .add_systems(PostUpdate, effects);
 
         #[cfg(debug_assertions)]

@@ -1,11 +1,16 @@
+use std::ops::Deref;
+use std::time::Duration;
+
 use avian2d::prelude::ColliderDisabled;
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_optix::pixel_perfect::OuterCamera;
+use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
+use bevy_seedling::sample::SamplePlayer;
 
+use crate::collectables::{Money, MoneyEvent};
 use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
-use crate::feature::{FeatureSpawner, Rarity};
+use crate::feature::{FeatureSpawner, Price, Rarity};
 use crate::sandbox;
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
@@ -28,6 +33,7 @@ impl Plugin for SelectionPlugin {
                     .after(StageSet)
                     .in_set(SelectionSet),
             )
+            .add_systems(Update, (handle_delayed, button_system))
             .add_systems(OnEnter(SelectionState::SpawnSelection), spawn_selection);
         //.add_systems(Update, report_entities);
 
@@ -165,38 +171,136 @@ fn spawn_selection(
         delay += 0.1;
     }
 
+    commands.spawn(DelayedSpawn::new(Duration::from_millis(500), button()));
+
     commands.set_state(SelectionState::SelectAndSpawn);
+}
+
+#[derive(Component)]
+struct DelayedSpawn {
+    data: Option<Box<dyn FnOnce(&mut Commands) + Send + Sync>>,
+    timer: Timer,
+}
+
+impl DelayedSpawn {
+    pub fn new<B: Bundle>(delay: Duration, bundle: B) -> Self {
+        Self {
+            data: Some(Box::new(move |commands| {
+                commands.spawn(bundle);
+            })),
+            timer: Timer::new(delay, TimerMode::Once),
+        }
+    }
+}
+
+fn handle_delayed(
+    mut q: Query<(Entity, &mut DelayedSpawn)>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    let delta = time.delta();
+    for (entity, mut spawn) in q.iter_mut() {
+        if spawn.timer.tick(delta).just_finished() {
+            if let Some(data) = spawn.data.take() {
+                data(&mut commands);
+                commands.entity(entity).despawn();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Component)]
+struct SkipButton;
+
+fn button() -> impl Bundle {
+    (
+        HIGH_RES_LAYER,
+        SkipButton,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            top: Val::Px(270.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        children![(
+            HIGH_RES_LAYER,
+            SkipButton,
+            Button,
+            Node {
+                width: Val::Px(150.0),
+                height: Val::Px(65.0),
+                border: UiRect::all(Val::Px(5.0)),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BorderColor(Color::BLACK),
+            BorderRadius::new(
+                Val::Percent(25.0),
+                Val::Percent(25.0),
+                Val::Percent(25.0),
+                Val::Percent(25.0)
+            ),
+            BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+            children![(
+                Text::new("Skip"),
+                TextFont {
+                    font_size: 28.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.9, 0.9, 0.9)),
+            )]
+        )],
+    )
 }
 
 fn select_feature(
     mut commands: Commands,
     options: Query<
-        (Entity, &FeatureSpawner, &GlobalTransform),
+        (Entity, &FeatureSpawner, &GlobalTransform, &Price),
         //(With<SelectionFeature>, With<Feature>),
     >,
-
     child_ofs: Query<&ChildOf>,
-
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
-
     selection_entities: Query<Entity, With<Selection>>,
-
     hovered: Single<&ChildOf, With<Hover>>,
+    money: Res<Money>,
+    mut money_event: EventWriter<MoneyEvent>,
+    server: Res<AssetServer>,
+    skip: Query<Entity, With<SkipButton>>,
 ) {
     let (camera, gt) = camera.into_inner();
     if !input.just_pressed(MouseButton::Left) {
         return;
     }
 
-    let Some((_, selected_feature, transform)) = options.iter().find(|(entity, _, _)| {
+    let Some((_, selected_feature, transform, price)) = options.iter().find(|(entity, ..)| {
         child_ofs
             .get(hovered.parent())
             .is_ok_and(|child_of| child_of.parent() == *entity)
     }) else {
         return;
     };
+
+    if price.0 > money.get() {
+        commands.spawn(
+            SamplePlayer::new(server.load("audio/pinball/1drop.ogg"))
+                .with_volume(bevy_seedling::prelude::Volume::Decibels(-12.0)),
+        );
+        return;
+    }
+
+    money_event.write(MoneyEvent {
+        money: -price.0,
+        position: transform.translation().xy(),
+    });
 
     //let Some(world_position) = window
     //    .cursor_position()
@@ -230,6 +334,52 @@ fn select_feature(
         for entity in selection_entities.iter() {
             commands.entity(entity).despawn();
             //.insert_recursive::<Children>(Disabled);
+        }
+
+        for entity in skip.iter() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn button_system(
+    mut interaction_query: Query<
+        (Entity, &Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<SkipButton>),
+    >,
+    selection_entities: Query<Entity, With<Selection>>,
+    mut commands: Commands,
+    packs: Option<Single<(Entity, &FeaturePacks)>>,
+) {
+    for (entity, interaction, mut color) in &mut interaction_query {
+        info!("here");
+        match *interaction {
+            Interaction::Pressed => {
+                if !sandbox::ENABLED {
+                    for entity in selection_entities.iter() {
+                        commands.entity(entity).despawn();
+                        //.insert_recursive::<Children>(Disabled);
+                    }
+
+                    commands.entity(entity).despawn();
+
+                    if let Some(packs) = &packs {
+                        let (entity, packs) = packs.deref();
+                        if packs.0.is_empty() {
+                            commands.set_state(GameState::Playing);
+                            commands.entity(*entity).despawn();
+                        } else {
+                            commands.set_state(SelectionState::SpawnSelection);
+                        }
+                    }
+                }
+            }
+            Interaction::Hovered => {
+                *color = Color::srgb(0.4, 0.4, 0.4).into();
+            }
+            Interaction::None => {
+                *color = Color::srgb(0.2, 0.2, 0.2).into();
+            }
         }
     }
 }

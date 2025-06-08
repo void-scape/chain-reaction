@@ -1,3 +1,5 @@
+use avian2d::data_structures::pair_key::PairKey;
+use avian2d::math::PI;
 use avian2d::prelude::*;
 
 use bevy::core_pipeline::bloom::Bloom;
@@ -15,6 +17,7 @@ use bevy_tween::tween::IntoTarget;
 use bevy_tween::{BevyTweenRegisterSystems, component_tween_system};
 use std::time::Duration;
 
+use crate::ball::{Ball, PlayerBall};
 use crate::collectables::{HexColor, Money, Points};
 use crate::float_tween_wrapper;
 use crate::state::{GameState, StateAppExt, remove_entities};
@@ -252,6 +255,30 @@ fn money_ui(
     }
 }
 
+#[derive(Component)]
+pub struct SlingSensor {
+    sensor: Entity,
+    impulse: Vec2,
+}
+
+fn slings(
+    trigger: Trigger<OnCollisionStart>,
+    slings: Query<&SlingSensor>,
+    mut balls: Query<(Entity, &mut ExternalImpulse), Or<(With<PlayerBall>, With<Ball>)>>,
+    collisions: Collisions,
+) {
+    let Ok(sling) = slings.get(trigger.target()) else {
+        return;
+    };
+    let Ok((ball, mut velocity)) = balls.get_mut(trigger.collider) else {
+        return;
+    };
+
+    if collisions.get(ball, sling.sensor).is_some() {
+        velocity.set_impulse(sling.impulse * 1.25);
+    }
+}
+
 fn spawn(mut commands: Commands, server: Res<AssetServer>) {
     spawn_light(
         &mut commands,
@@ -348,33 +375,79 @@ fn spawn(mut commands: Commands, server: Res<AssetServer>) {
         margin,
     ));
 
-    commands.spawn((
-        Cabinet,
-        CollisionEventsEnabled,
-        RigidBody::Static,
-        CabinetMesh {
-            scene: server.load("meshes/cabinet.gltf"),
-            mesh: "LeftSling",
-        },
-        cabinet_transform,
-        restitution,
-        friction,
-        margin,
-    ));
+    let left_sensor = commands
+        .spawn((
+            Cabinet,
+            CollisionEventsEnabled,
+            RigidBody::Static,
+            Sensor,
+            CabinetMesh {
+                scene: server.load("meshes/cabinet.gltf"),
+                mesh: "LeftSensor",
+            },
+            cabinet_transform,
+            restitution,
+            friction,
+            margin,
+        ))
+        .id();
 
-    commands.spawn((
-        Cabinet,
-        CollisionEventsEnabled,
-        RigidBody::Static,
-        CabinetMesh {
-            scene: server.load("meshes/cabinet.gltf"),
-            mesh: "RightSling",
-        },
-        cabinet_transform,
-        restitution,
-        friction,
-        margin,
-    ));
+    let right_sensor = commands
+        .spawn((
+            Cabinet,
+            CollisionEventsEnabled,
+            RigidBody::Static,
+            Sensor,
+            CabinetMesh {
+                scene: server.load("meshes/cabinet.gltf"),
+                mesh: "RightSensor",
+            },
+            cabinet_transform,
+            restitution,
+            friction,
+            margin,
+        ))
+        .id();
+
+    commands
+        .spawn((
+            Cabinet,
+            CollisionEventsEnabled,
+            RigidBody::Static,
+            CabinetMesh {
+                scene: server.load("meshes/cabinet.gltf"),
+                mesh: "LeftSling",
+            },
+            SlingSensor {
+                sensor: left_sensor,
+                impulse: Vec2::from_angle(PI * 0.25) * 45_000.0,
+            },
+            cabinet_transform,
+            restitution,
+            friction,
+            margin,
+        ))
+        .observe(slings);
+
+    commands
+        .spawn((
+            Cabinet,
+            CollisionEventsEnabled,
+            RigidBody::Static,
+            CabinetMesh {
+                scene: server.load("meshes/cabinet.gltf"),
+                mesh: "RightSling",
+            },
+            SlingSensor {
+                sensor: right_sensor,
+                impulse: Vec2::from_angle(PI * 0.75) * 45_000.0,
+            },
+            cabinet_transform,
+            restitution,
+            friction,
+            margin,
+        ))
+        .observe(slings);
 
     commands.spawn((
         Cabinet,

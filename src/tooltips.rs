@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use crate::feature::Price;
 use avian2d::prelude::*;
 use bevy::ecs::component::HookContext;
 use bevy::ecs::world::DeferredWorld;
@@ -81,12 +82,13 @@ fn show_tooltips_after(
     mut commands: Commands,
     server: Res<AssetServer>,
     time: Res<Time>,
-    mut show: Query<(Entity, &mut ShowTooltipsAfter, &Tooltips)>,
+    mut show: Query<(Entity, &mut ShowTooltipsAfter, &Tooltips, Option<&Price>)>,
 ) {
-    for (entity, mut show, tips) in show.iter_mut() {
+    for (entity, mut show, tips, price) in show.iter_mut() {
         show.0.tick(time.delta());
         if show.0.finished() {
-            let child = spawn_tooltips(&mut commands, &server, &tips, Vec2::ZERO);
+            let child =
+                spawn_tooltips(&mut commands, &server, tips, price.map(|p| p.0), Vec2::ZERO);
             commands
                 .entity(entity)
                 .remove::<ShowTooltipsAfter>()
@@ -122,9 +124,14 @@ fn hover(
     server: Res<AssetServer>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
-
     targets: Query<
-        (Entity, &Tooltips, &GlobalTransform, &Collider),
+        (
+            Entity,
+            &Tooltips,
+            &GlobalTransform,
+            &Collider,
+            Option<&Price>,
+        ),
         (Without<Hovered>, Without<ShowTooltips>),
     >,
     hovered: Query<(Entity, &GlobalTransform, &Collider), (With<Hovered>, Without<ShowTooltips>)>,
@@ -138,10 +145,10 @@ fn hover(
         return;
     };
 
-    for (entity, tips, gt, collider) in targets.iter() {
+    for (entity, tips, gt, collider, price) in targets.iter() {
         let position = gt.translation().xy();
         if collider.contains_point(position, gt.rotation(), world_position) {
-            let hover = spawn_tooltips(&mut commands, &server, tips, position);
+            let hover = spawn_tooltips(&mut commands, &server, tips, price.map(|p| p.0), position);
             commands.entity(entity).insert(Hovered(hover));
         }
     }
@@ -158,6 +165,7 @@ fn spawn_tooltips(
     commands: &mut Commands,
     server: &AssetServer,
     tips: &Tooltips,
+    price: Option<i32>,
     position: Vec2,
 ) -> Entity {
     let sprite = commands
@@ -174,6 +182,8 @@ fn spawn_tooltips(
         .observe(hover_sprite)
         .observe(remove_hover_sprite)
         .id();
+
+    let price = price.map(|p| format!("${p}")).unwrap_or_default();
 
     commands
         .spawn((
@@ -193,11 +203,17 @@ fn spawn_tooltips(
                     Transform::from_xyz(0., -100., 0.),
                 ),
                 (
+                    Text2d::new(price),
+                    TextBounds::new_horizontal(220.),
+                    TextLayout::new_with_justify(JustifyText::Center),
+                    Transform::from_xyz(0., -150., 0.),
+                ),
+                (
                     Text2d::new(tips.desc),
                     TextBounds::new_horizontal(220.),
                     TextLayout::new_with_justify(JustifyText::Center),
-                    Transform::from_xyz(0., -200., 0.),
-                ),
+                    Transform::from_xyz(0., -250., 0.),
+                )
             ],
         ))
         .add_child(sprite)

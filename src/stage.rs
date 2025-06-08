@@ -1,3 +1,5 @@
+use avian2d::math::PI;
+use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy_seedling::prelude::*;
@@ -5,7 +7,7 @@ use dashu::ibig;
 
 use crate::ball::{BallComponents, PlayerBall};
 use crate::big::BigPoints;
-use crate::collectables::Points;
+use crate::collectables::{Money, MoneyEvent, Points};
 use crate::sandbox;
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
 
@@ -16,7 +18,15 @@ pub struct StagePlugin;
 
 impl Plugin for StagePlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<AdvanceEvent>()
+        app.register_type::<SpawnPosition>()
+            .insert_resource(SpawnPosition(Vec2::new(
+                crate::cabinet::WIDTH / 2. + 10.,
+                crate::cabinet::HEIGHT / 2. - 182.,
+            )))
+            // .add_plugins(bevy_inspector_egui::quick::ResourceInspectorPlugin::<
+            //     SpawnPosition,
+            // >::default())
+            .add_event::<AdvanceEvent>()
             .add_reset(remove_entities::<With<Stage>>)
             .add_systems(OnEnter(GameState::StartGame), spawn_stage)
             .configure_sets(PreUpdate, StageSet.in_set(Playing));
@@ -94,7 +104,7 @@ impl Stage {
 
     fn points(level: usize) -> BigPoints {
         let base = ibig!(2);
-        let required = ibig!(10);
+        let required = ibig!(20);
         let total = required * base.pow(level);
         BigPoints(total)
 
@@ -116,12 +126,16 @@ impl Stage {
     }
 }
 
+#[derive(Resource, Reflect)]
+pub struct SpawnPosition(pub Vec2);
+
 fn stage(
     mut commands: Commands,
     server: Res<AssetServer>,
     points: Res<Points>,
     alive: Query<&BallComponents>,
     stage: Single<(Entity, &mut Stage)>,
+    position: Res<SpawnPosition>,
 ) {
     if alive.is_empty() {
         let (entity, mut stage) = stage.into_inner();
@@ -130,11 +144,8 @@ fn stage(
             stage.lives -= 1;
             commands.spawn((
                 PlayerBall,
-                Transform::from_xyz(
-                    -crate::cabinet::WIDTH / 2. + 80.,
-                    crate::cabinet::HEIGHT / 2. - 60.,
-                    0.,
-                ),
+                Transform::from_translation(position.0.extend(0.0)),
+                LinearVelocity(Vec2::from_angle(PI * 0.72) * 800.0),
             ));
 
             commands.spawn(
@@ -189,6 +200,7 @@ fn advance(
     mut points: ResMut<Points>,
     stage: Single<&Stage>,
     mut writer: EventWriter<AdvanceEvent>,
+    mut money: EventWriter<MoneyEvent>,
 ) {
     commands.entity(trigger.target()).remove::<Advance>();
 
@@ -201,4 +213,8 @@ fn advance(
             .with_volume(Volume::Linear(0.5)),
     );
     points.reset();
+    money.write(MoneyEvent {
+        money: 1,
+        position: Vec2::default(),
+    });
 }

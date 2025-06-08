@@ -11,12 +11,12 @@ use bevy_seedling::sample::SamplePlayer;
 use dashu::ibig;
 
 use crate::ball::{Ball, BallComponents, PlayerBall};
+use crate::big::BigPoints;
 use crate::collectables::{MoneyEvent, PointEvent};
 use crate::paddle::PaddleBonk;
 use crate::sampler::Sampler;
 use crate::state::{GameState, Playing};
 use crate::tooltips::Tooltips;
-use crate::big::BigPoints;
 
 use super::{BonkImpulse, Bonks, FeatureCooldown, Points, feature_cooldown};
 
@@ -51,8 +51,11 @@ impl Plugin for FeaturesPlugin {
 }
 
 #[derive(Default, Clone, Component)]
-#[require(Bonks::Unlimited, Points(0), CollisionEventsEnabled)]
+#[require(Bonks::Unlimited, Points(0), CollisionEventsEnabled, Price(1))]
 pub struct Feature;
+
+#[derive(Clone, Copy, Component)]
+pub struct Price(pub i32);
 
 #[derive(Clone, Copy, Component)]
 pub enum Rarity {
@@ -84,15 +87,15 @@ impl FeatureSpawner {
 
 pub fn spawn_feature_list(mut commands: Commands) {
     commands.spawn((Bumper, Rarity::Common, feature_bundle()));
-    commands.spawn((MoneyBumper, Rarity::Uncommon, feature_bundle()));
-    commands.spawn((BingBong, Rarity::Common, feature_bundle()));
     commands.spawn((Dispenser, Rarity::Common, feature_bundle()));
+    commands.spawn((MoneyBumper, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((BingBong, Rarity::Uncommon, feature_bundle()));
     commands.spawn((Splitter::default(), Rarity::Uncommon, feature_bundle()));
     commands.spawn((Lotto, Rarity::Uncommon, feature_bundle()));
-    commands.spawn((NorthWestRedirector, Rarity::Uncommon, feature_bundle()));
-    commands.spawn((NorthEastRedirector, Rarity::Uncommon, feature_bundle()));
-    commands.spawn((SouthWestRedirector, Rarity::Uncommon, feature_bundle()));
-    commands.spawn((SouthEastRedirector, Rarity::Uncommon, feature_bundle()));
+    commands.spawn((NorthWestRedirector, Rarity::Rare, feature_bundle()));
+    commands.spawn((NorthEastRedirector, Rarity::Rare, feature_bundle()));
+    commands.spawn((SouthWestRedirector, Rarity::Rare, feature_bundle()));
+    commands.spawn((SouthEastRedirector, Rarity::Rare, feature_bundle()));
     commands.spawn((FieldInverter, Rarity::Rare, feature_bundle()));
 }
 
@@ -113,7 +116,7 @@ fn feature_bundle() -> impl Bundle {
     Points(20),
     BonkImpulse(2.),
     DebugCircle::color(FEATURE_RADIUS, RED),
-    Collider::circle(FEATURE_RADIUS)
+    Collider::circle(FEATURE_RADIUS),
 )]
 pub struct Bumper;
 
@@ -152,7 +155,8 @@ fn clear_bing_bong(mut commands: Commands, mut paddle_hit: EventReader<PaddleBon
     Points(0),
     BonkImpulse(2.),
     DebugCircle::color(FEATURE_RADIUS, CYAN_700),
-    Collider::circle(FEATURE_RADIUS)
+    Collider::circle(FEATURE_RADIUS),
+    Price(2),
 )]
 pub struct BingBong;
 
@@ -261,22 +265,43 @@ pub fn dispense(
     }
 }
 
+#[derive(Component)]
+pub struct BallLimit(usize);
+
 #[derive(Default, Component, Reflect)]
-#[require(Collider::circle(FEATURE_RADIUS), Sensor)]
+#[require(Collider::circle(FEATURE_RADIUS), Sensor, Price(3))]
 pub struct Redirector(Vec2);
 
 pub fn redirect(
     trigger: Trigger<OnCollisionStart>,
     mut balls: Query<
-        (&mut Transform, &mut LinearVelocity, &GlobalTransform),
+        (
+            &mut Transform,
+            &mut LinearVelocity,
+            &GlobalTransform,
+            Option<&mut BallLimit>,
+        ),
         Or<(With<Ball>, With<PlayerBall>)>,
     >,
     transforms: Query<(&Redirector, &GlobalTransform)>,
+    mut commands: Commands,
 ) {
-    if let (Ok((direction, feature)), Ok((mut ball_local, mut velocity, ball))) = (
+    if let (Ok((direction, feature)), Ok((mut ball_local, mut velocity, ball, limit))) = (
         transforms.get(trigger.target()),
         balls.get_mut(trigger.collider),
     ) {
+        match limit {
+            Some(mut limit) => {
+                if limit.0 == 0 {
+                    return;
+                }
+                limit.0 -= 1;
+            }
+            None => {
+                commands.entity(trigger.collider).insert(BallLimit(50));
+            }
+        }
+
         let feature = feature.compute_transform();
         let ball = ball.translation().xy();
 
@@ -294,44 +319,44 @@ pub fn redirect(
 /// Redirect balls north-west.
 #[derive(Default, Component, Reflect)]
 #[require(
+    Redirector(Vec2::from_angle(PI * 0.75)),
     Feature,
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     DebugCircle::color(FEATURE_RADIUS, GREEN),
-    Redirector(Vec2::from_angle(PI * 0.75)),
 )]
 pub struct NorthWestRedirector;
 
 /// Redirect balls north-east.
 #[derive(Default, Component, Reflect)]
 #[require(
+    Redirector(Vec2::from_angle(PI * 0.25)),
     Feature,
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     DebugCircle::color(FEATURE_RADIUS, GREEN),
-    Redirector(Vec2::from_angle(PI * 0.25)),
 )]
 pub struct NorthEastRedirector;
 
 /// Redirect balls south-west.
 #[derive(Default, Component, Reflect)]
 #[require(
+    Redirector(Vec2::from_angle(PI * 1.25)),
     Feature,
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     DebugCircle::color(FEATURE_RADIUS, GREEN),
-    Redirector(Vec2::from_angle(PI * 1.25)),
 )]
 pub struct SouthWestRedirector;
 
 /// Redirect balls south-east.
 #[derive(Default, Component, Reflect)]
 #[require(
+    Redirector(Vec2::from_angle(PI * 1.75)),
     Feature,
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     DebugCircle::color(FEATURE_RADIUS, GREEN),
-    Redirector(Vec2::from_angle(PI * 1.75)),
 )]
 pub struct SouthEastRedirector;
 
@@ -370,6 +395,7 @@ pub fn lotto(
 #[require(
     Feature,
     BonkImpulse(1.),
+    Bonks::Limited(10),
     FeatureSpawner::new::<Self>(),
     Tooltips::new::<Self>(),
     Points(10),
@@ -388,21 +414,21 @@ pub fn splitter(
     trigger: Trigger<OnCollisionStart>,
     balls: Query<(Entity, &GlobalTransform, &LinearVelocity), With<BallComponents>>,
     filtered: Query<&FeatureCooldown<Splitter>>,
-    mut transforms: Query<(&mut Splitter, &GlobalTransform)>,
+    mut transforms: Query<(&Splitter, &GlobalTransform)>,
     mut commands: Commands,
 ) {
     if filtered.contains(trigger.collider) {
         return;
     }
 
-    if let (Ok((mut count, feature)), Ok((entity, ball, velocity))) = (
+    if let (Ok((count, feature)), Ok((entity, ball, velocity))) = (
         transforms.get_mut(trigger.target()),
         balls.get(trigger.collider),
     ) {
-        if count.0 == 0 {
-            return;
-        }
-        count.0 -= 1;
+        // if count.0 == 0 {
+        //     return;
+        // }
+        // count.0 -= 1;
 
         let feature = feature.compute_transform();
         let ball = ball.translation().xy();

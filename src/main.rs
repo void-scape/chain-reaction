@@ -75,6 +75,10 @@ fn main() {
                 ..default()
             })
             .set(ImagePlugin::default_nearest()),
+        bevy_egui::EguiPlugin {
+            enable_multipass_for_primary_context: true,
+        },
+        // bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
         bevy_tween::DefaultTweenPlugins,
         bevy_enhanced_input::EnhancedInputPlugin,
         avian2d::PhysicsPlugins::new(Avian).with_length_unit(10.),
@@ -113,13 +117,7 @@ fn main() {
         animation::AnimationPlugin,
         sprites::SpritePlugin,
     ))
-    .add_plugins((
-        bevy_egui::EguiPlugin {
-            enable_multipass_for_primary_context: true,
-        },
-        //bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
-        avian2d::debug_render::PhysicsDebugPlugin::new(Avian),
-    ))
+    .add_plugins((avian2d::debug_render::PhysicsDebugPlugin::new(Avian),))
     .init_schedule(Avian)
     .insert_resource(Gravity(Vec2::NEG_Y * GRAVITY))
     .add_systems(Startup, set_window_icon);
@@ -129,23 +127,10 @@ fn main() {
     #[cfg(target_arch = "wasm32")]
     app.add_plugins(
         bevy_seedling::SeedlingPlugin::<firewheel_web_audio::WebAudioBackend> {
-            config: FirewheelConfig {
-                num_graph_inputs: ChannelCount::STEREO,
-                ..Default::default()
-            },
-            stream_config: firewheel_web_audio::WebAudioConfig {
-                request_input: true,
-                sample_rate: None,
-            },
+            config: Default::default(),
+            stream_config: Default::default(),
             spawn_default_pool: true,
             pool_size: 4..=32,
-        },
-    )
-    .add_systems(
-        Startup,
-        |input: Single<Entity, With<bevy_seedling::edge::AudioGraphInput>>,
-         mut commands: Commands| {
-            commands.entity(*input).connect(MainBus);
         },
     );
 

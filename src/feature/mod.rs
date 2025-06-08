@@ -3,13 +3,13 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use crate::ball::{Ball, BallComponents, PaddleRestMult, PlayerBall};
+use crate::big::BigPoints;
 use crate::collectables::PointEvent;
 use crate::state::{GameState, StateAppExt, remove_entities};
 use crate::{Avian, Layer, cabinet};
 use avian2d::prelude::PhysicsSet;
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use crate::big::BigPoints;
 
 use self::grid::FeatureGrid;
 
@@ -255,6 +255,7 @@ fn bonk_bounce(
             let impulse = (ball_trans - feature_trans).normalize_or_zero() * 38_000. * mult.0;
             bonk.apply_impulse(impulse);
 
+            #[cfg(debug_assertions)]
             commands.spawn((
                 ImpulseGizmo {
                     impulse,
