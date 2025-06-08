@@ -11,7 +11,7 @@ use crate::big::BigPoints;
 use crate::cabinet::{ScrollingTexture, Speed};
 use crate::collectables::TotalPoints;
 use crate::input::Enter;
-use crate::stage::{AdvanceEvent, StageSet};
+use crate::stage::{Advance, Loose, Stage, Win};
 use crate::state::{GameState, StateAppExt, remove_entities};
 
 pub struct LeaderBoardPlugin;
@@ -20,7 +20,6 @@ impl Plugin for LeaderBoardPlugin {
     fn build(&self, app: &mut App) {
         app.add_reset(remove_entities::<With<Leaderboard>>)
             .add_systems(Startup, player_data)
-            .add_systems(PreUpdate, record_points.after(StageSet))
             .add_systems(
                 OnEnter(GameState::Leaderboard),
                 (spawn_leaderboard, background),
@@ -28,7 +27,10 @@ impl Plugin for LeaderBoardPlugin {
             .add_observer(|_: Trigger<Fired<Enter>>, mut commands: Commands| {
                 commands.run_system_cached(remove_entities::<With<Leaderboard>>);
                 commands.set_state(GameState::ToGame);
-            });
+            })
+            .add_observer(update_points::<Win>)
+            .add_observer(update_points::<Loose>)
+            .add_observer(update_points::<Advance>);
     }
 }
 
@@ -58,17 +60,17 @@ fn player_data(mut commands: Commands) {
     )
 }
 
-fn record_points(
-    mut reader: EventReader<AdvanceEvent>,
+fn update_points<E: Component>(
+    _: Trigger<OnAdd, E>,
+    stage: Single<&Stage>,
     mut data: ResMut<Persistent<PlayerData>>,
     total_points: Res<TotalPoints>,
 ) {
-    for event in reader.read() {
-        data.point_record
-            .push((event.level, total_points.get().clone()));
-        if let Err(e) = data.persist() {
-            error!("failed to save player data: {e}");
-        }
+    info!("recording: {}", total_points.get().clone());
+    data.point_record
+        .push((stage.level.saturating_sub(1), total_points.get().clone()));
+    if let Err(e) = data.persist() {
+        error!("failed to save player data: {e}");
     }
 }
 
