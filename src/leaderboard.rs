@@ -7,6 +7,7 @@ use bevy_enhanced_input::events::Fired;
 use bevy_optix::pixel_perfect::HIGH_RES_LAYER;
 use bevy_persistent::prelude::*;
 
+use crate::big::BigPoints;
 use crate::cabinet::{ScrollingTexture, Speed};
 use crate::collectables::TotalPoints;
 use crate::input::Enter;
@@ -34,7 +35,7 @@ impl Plugin for LeaderBoardPlugin {
 #[derive(Default, serde::Serialize, serde::Deserialize, Resource)]
 struct PlayerData {
     /// (level, points)
-    point_record: Vec<(usize, usize)>,
+    point_record: Vec<(usize, BigPoints)>,
 }
 
 fn player_data(mut commands: Commands) {
@@ -50,6 +51,8 @@ fn player_data(mut commands: Commands) {
             .format(StorageFormat::Bincode)
             .path(config_dir.join("data"))
             .default(Default::default())
+            .revertible(true)
+            .revert_to_default_on_deserialization_errors(true)
             .build()
             .unwrap(),
     )
@@ -61,7 +64,8 @@ fn record_points(
     total_points: Res<TotalPoints>,
 ) {
     for event in reader.read() {
-        data.point_record.push((event.level, total_points.get()));
+        data.point_record
+            .push((event.level, total_points.get().clone()));
         if let Err(e) = data.persist() {
             error!("failed to save player data: {e}");
         }
@@ -120,8 +124,7 @@ fn spawn_leaderboard(
         Transform::from_xyz(0., crate::RES_HEIGHT / 3., LEADERZ),
     ));
 
-    data.point_record
-        .sort_by_key(|(_, score)| std::cmp::Reverse(*score));
+    data.point_record.sort_by(|a, b| b.1.0.cmp(&a.1.0));
     let largest_text = data
         .point_record
         .first()

@@ -4,6 +4,7 @@
 
 use std::io::Cursor;
 
+use avian2d::parry::simba::scalar::SupersetOf;
 use avian2d::prelude::{Gravity, PhysicsLayer};
 use bevy::DefaultPlugins;
 use bevy::app::{App, FixedMainScheduleOrder};
@@ -17,6 +18,7 @@ use winit::window::Icon;
 
 mod animation;
 mod ball;
+mod big;
 mod cabinet;
 mod collectables;
 mod cursor;

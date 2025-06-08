@@ -80,6 +80,7 @@ rand = "0.8"
 firewheel-web-audio = "0.1"
 bevy_egui = "0.34"
 bevy-inspector-egui = "0.31"
+dashu = { version = "0.4", features = ["serde"] }
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }

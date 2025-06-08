@@ -9,6 +9,7 @@ use crate::{Avian, Layer, cabinet};
 use avian2d::prelude::PhysicsSet;
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use crate::big::BigPoints;
 
 use self::grid::FeatureGrid;
 
@@ -204,7 +205,7 @@ fn feature_bonk(
     });
     point_writer.write(PointEvent {
         position: transform.translation().xy(),
-        points: (points as usize).max(1),
+        points: BigPoints::new((points as i32).max(1)),
     });
 }
 

@@ -1,8 +1,10 @@
 use crate::RESOLUTION_SCALE;
+use crate::big::BigPoints;
 use crate::state::{StateAppExt, insert_resource};
 use crate::text::flash_text_rotate;
 use bevy::prelude::*;
 use bevy_seedling::prelude::*;
+use dashu::integer::IBig;
 use rand::Rng;
 use std::f32::consts::PI;
 use std::usize;
@@ -18,14 +20,14 @@ pub struct CollectablePlugin;
 impl Plugin for CollectablePlugin {
     fn build(&self, app: &mut App) {
         app.add_reset((
-            insert_resource(Points(0)),
-            insert_resource(TotalPoints(0)),
+            insert_resource(TotalPoints(Default::default())),
+            insert_resource(Points::default()),
             insert_resource(Money(0)),
         ))
         .add_event::<PointEvent>()
         .add_event::<MoneyEvent>()
-        .insert_resource(Points(0))
-        .insert_resource(TotalPoints(0))
+        .insert_resource(Points::default())
+        .insert_resource(TotalPoints(Default::default()))
         .insert_resource(Money(0))
         .add_systems(PostUpdate, effects);
 
@@ -70,30 +72,30 @@ impl Into<Color> for HexColor {
 }
 
 #[derive(Debug, Clone, Resource)]
-pub struct TotalPoints(usize);
+pub struct TotalPoints(BigPoints);
 
 impl TotalPoints {
-    pub fn get(&self) -> usize {
-        self.0
+    pub fn get(&self) -> &BigPoints {
+        &self.0
     }
 }
 
-#[derive(Debug, Clone, Resource)]
-pub struct Points(usize);
+#[derive(Debug, Default, Clone, Resource)]
+pub struct Points(BigPoints);
 
 impl Points {
-    pub fn get(&self) -> usize {
-        self.0
+    pub fn get(&self) -> &BigPoints {
+        &self.0
     }
 
     pub fn reset(&mut self) {
-        self.0 = 0;
+        self.0 = BigPoints(IBig::ZERO);
     }
 }
 
 #[derive(Event)]
 pub struct PointEvent {
-    pub points: usize,
+    pub points: BigPoints,
     pub position: Vec2,
 }
 
@@ -131,7 +133,7 @@ fn effects(
     let rot = PI / 9.;
 
     for event in points.read() {
-        total_points.0 += event.points;
+        total_points.0.0 += event.points.0.clone();
         flash_text_rotate(
             &mut commands,
             &server,
@@ -144,8 +146,8 @@ fn effects(
     }
 
     for event in points.read() {
-        total_points.0 += event.points;
-        total_total_points.0 += event.points;
+        total_points.0.0 += event.points.0.clone();
+        total_total_points.0.0 += event.points.0.clone();
         flash_text_rotate(
             &mut commands,
             &server,

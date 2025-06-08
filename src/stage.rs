@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bevy_seedling::prelude::*;
+use dashu::ibig;
 
 use crate::ball::{BallComponents, PlayerBall};
+use crate::big::BigPoints;
 use crate::collectables::Points;
 use crate::sandbox;
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
@@ -62,7 +64,7 @@ fn spawn_stage(mut commands: Commands) {
 
 #[derive(Debug, Clone, Component)]
 pub struct Stage {
-    pub points: usize,
+    pub points: BigPoints,
     pub level: usize,
     pub lives: usize,
 }
@@ -76,8 +78,8 @@ impl Stage {
         }
     }
 
-    pub fn progress(&mut self, acquired_points: usize) -> bool {
-        let progress = acquired_points >= self.points;
+    pub fn progress(&mut self, acquired_points: BigPoints) -> bool {
+        let progress = acquired_points.0 >= self.points.0;
         self.level += 1;
         self.points = Self::points(self.level);
         self.lives = Self::lives(self.level);
@@ -90,18 +92,23 @@ impl Stage {
         //self.level >= 2
     }
 
-    fn points(level: usize) -> usize {
-        match level {
-            0 => 20,
-            _ => 20,
-            //1 => 0,
-            //2 => 0,
-            //3 => 0,
-            //4 => 0,
-            //5 => 0,
-            //6 => 0,
-            //_ => todo!("points for level {}", level),
-        }
+    fn points(level: usize) -> BigPoints {
+        let base = ibig!(2);
+        let required = ibig!(10);
+        let total = required * base.pow(level);
+        BigPoints(total)
+
+        // match level {
+        //     0 => 0,
+        //     _ => 20,
+        //     //1 => 0,
+        //     //2 => 0,
+        //     //3 => 0,
+        //     //4 => 0,
+        //     //5 => 0,
+        //     //6 => 0,
+        //     //_ => todo!("points for level {}", level),
+        // }
     }
 
     fn lives(_level: usize) -> usize {
@@ -136,7 +143,7 @@ fn stage(
             );
         } else {
             let mut entity = commands.entity(entity);
-            if stage.progress(points.get()) {
+            if stage.progress(points.get().clone()) {
                 if stage.win() {
                     entity.insert(Win);
                 } else {
@@ -171,7 +178,7 @@ fn loose(trigger: Trigger<OnAdd, Loose>, mut commands: Commands, server: Res<Ass
 
 #[derive(Event)]
 pub struct AdvanceEvent {
-    pub points: usize,
+    pub points: BigPoints,
     pub level: usize,
 }
 
@@ -186,7 +193,7 @@ fn advance(
     commands.entity(trigger.target()).remove::<Advance>();
 
     writer.write(AdvanceEvent {
-        points: points.get(),
+        points: points.get().clone(),
         level: stage.level - 1,
     });
     commands.spawn(

@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use bevy_optix::debug::DebugCircle;
 use bevy_seedling::prelude::Volume;
 use bevy_seedling::sample::SamplePlayer;
+use dashu::ibig;
 
 use crate::ball::{Ball, BallComponents, PlayerBall};
 use crate::collectables::{MoneyEvent, PointEvent};
@@ -15,6 +16,7 @@ use crate::paddle::PaddleBonk;
 use crate::sampler::Sampler;
 use crate::state::{GameState, Playing};
 use crate::tooltips::Tooltips;
+use crate::big::BigPoints;
 
 use super::{BonkImpulse, Bonks, FeatureCooldown, Points, feature_cooldown};
 
@@ -169,14 +171,14 @@ pub fn bing_bong(
     match balls.get_mut(trigger.collider) {
         Ok(mut level) => {
             event_writer.write(PointEvent {
-                points: 2usize.pow(level.0) * 10,
+                points: BigPoints(ibig!(10) * ibig!(2).pow(level.0 as usize)),
                 position: transform.translation().xy(),
             });
             level.0 += 1;
         }
         Err(_) => {
             event_writer.write(PointEvent {
-                points: 10,
+                points: BigPoints(ibig!(10)),
                 position: transform.translation().xy(),
             });
             commands.entity(trigger.collider).insert(BingBongLevel(1));
