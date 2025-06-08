@@ -93,7 +93,7 @@ fn tween_music_start(
     let mut target = target.into_target().state(settings.speed as f32);
 
     commands.animation().insert(tween(
-        Duration::from_secs(5),
+        Duration::from_secs_f32(2.5),
         EaseKind::QuadraticInOut,
         target.with(interpolators::sample_speed_to(1.0)),
     ));
@@ -116,7 +116,7 @@ fn tween_music_lose(
     let mut target = target.into_target().state(settings.speed as f32);
 
     commands.animation().insert(tween(
-        Duration::from_secs(3),
+        Duration::from_secs(2),
         EaseKind::QuadraticOut,
         target.with(interpolators::sample_speed_to(0.4)),
     ));

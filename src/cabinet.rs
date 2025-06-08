@@ -1,9 +1,6 @@
 use avian2d::prelude::*;
 
 use bevy::core_pipeline::bloom::Bloom;
-use bevy::image::{
-    ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor,
-};
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
 use bevy::sprite::{AlphaMode2d, Anchor, Material2d, Material2dPlugin};
@@ -100,7 +97,7 @@ struct CabinetMesh {
 const CABINET_SCALE: f32 = 235.0;
 
 #[derive(Default, Component)]
-struct Cabinet;
+pub struct Cabinet;
 
 fn generate_trimesh_colliders(
     meshes: Query<(Entity, &CabinetMesh), Without<Collider>>,
@@ -462,42 +459,17 @@ fn spawn_light(commands: &mut Commands, color: impl Into<Color>) {
 }
 
 #[derive(Component)]
-struct Speed(Vec2);
+pub struct Speed(pub Vec2);
 
 fn background(
     mut commands: Commands,
-    server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut mats: ResMut<Assets<ScrollingTexture>>,
     mut diamonds: ResMut<Assets<Diamonds>>,
 ) {
     commands.spawn((
         Cabinet,
         Mesh2d(meshes.add(Rectangle::new(1024., 1024.))),
         MeshMaterial2d(diamonds.add(Diamonds {})),
-    ));
-
-    commands.spawn((
-        Cabinet,
-        Mesh2d(meshes.add(Rectangle::new(1024., 1024.))),
-        Transform::from_xyz(0., 0., -900.),
-        Speed(Vec2::new(0.05, 0.1) * 0.5),
-        MeshMaterial2d(mats.add(ScrollingTexture {
-            uv_offset: Vec2::ZERO,
-            texture: server.load_with_settings("textures/checkers.png", |s: &mut _| {
-                *s = ImageLoaderSettings {
-                    sampler: ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::MirrorRepeat,
-                        address_mode_v: ImageAddressMode::MirrorRepeat,
-                        mag_filter: ImageFilterMode::Nearest,
-                        min_filter: ImageFilterMode::Nearest,
-                        mipmap_filter: ImageFilterMode::Nearest,
-                        ..default()
-                    }),
-                    ..default()
-                }
-            }),
-        })),
     ));
 }
 
@@ -519,12 +491,12 @@ fn update_scrolling_background(
 }
 
 #[derive(Clone, Asset, TypePath, AsBindGroup)]
-struct ScrollingTexture {
+pub struct ScrollingTexture {
     #[texture(0)]
     #[sampler(1)]
-    texture: Handle<Image>,
+    pub texture: Handle<Image>,
     #[uniform(2)]
-    uv_offset: Vec2,
+    pub uv_offset: Vec2,
 }
 
 impl Material2d for ScrollingTexture {

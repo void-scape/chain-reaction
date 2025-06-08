@@ -92,7 +92,7 @@ impl Stage {
 
     fn points(level: usize) -> usize {
         match level {
-            0 => 0,
+            0 => 20,
             _ => 20,
             //1 => 0,
             //2 => 0,
@@ -152,7 +152,7 @@ fn stage(
 fn win(trigger: Trigger<OnAdd, Win>, mut commands: Commands, server: Res<AssetServer>) {
     commands.entity(trigger.target()).remove::<Win>();
 
-    commands.set_state(GameState::Leaderboard);
+    commands.set_state(GameState::Reset);
     commands.spawn(
         SamplePlayer::new(server.load("audio/pinball/1JACKPOT.ogg"))
             .with_volume(Volume::Linear(0.5)),
@@ -162,7 +162,7 @@ fn win(trigger: Trigger<OnAdd, Win>, mut commands: Commands, server: Res<AssetSe
 fn loose(trigger: Trigger<OnAdd, Loose>, mut commands: Commands, server: Res<AssetServer>) {
     commands.entity(trigger.target()).remove::<Loose>();
 
-    commands.set_state(GameState::Leaderboard);
+    commands.set_state(GameState::Reset);
     commands.spawn(
         SamplePlayer::new(server.load("audio/pinball/1destroyed.ogg"))
             .with_volume(Volume::Linear(0.5)),

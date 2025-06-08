@@ -8,9 +8,11 @@ pub struct LoadingPlugin;
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
         //#[cfg(not(debug_assertions))]
-        let cont = GameState::Menu;
+        //let cont = GameState::Menu;
         //#[cfg(debug_assertions)]
         //let cont = GameState::StartGame;
+
+        let cont = GameState::ToLeaderboard;
 
         app.add_loading_state(
             LoadingState::new(GameState::Loading)

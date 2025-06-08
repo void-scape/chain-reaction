@@ -17,12 +17,17 @@ pub struct CollectablePlugin;
 
 impl Plugin for CollectablePlugin {
     fn build(&self, app: &mut App) {
-        app.add_reset((insert_resource(Points(0)), insert_resource(Money(0))))
-            .add_event::<PointEvent>()
-            .add_event::<MoneyEvent>()
-            .insert_resource(Points(0))
-            .insert_resource(Money(0))
-            .add_systems(PostUpdate, effects);
+        app.add_reset((
+            insert_resource(Points(0)),
+            insert_resource(TotalPoints(0)),
+            insert_resource(Money(0)),
+        ))
+        .add_event::<PointEvent>()
+        .add_event::<MoneyEvent>()
+        .insert_resource(Points(0))
+        .insert_resource(TotalPoints(0))
+        .insert_resource(Money(0))
+        .add_systems(PostUpdate, effects);
 
         #[cfg(debug_assertions)]
         {
@@ -61,6 +66,15 @@ impl Into<Color> for HexColor {
             (self.0 >> 8) as u8 & 0xFF,
             self.0 as u8,
         )
+    }
+}
+
+#[derive(Debug, Clone, Resource)]
+pub struct TotalPoints(usize);
+
+impl TotalPoints {
+    pub fn get(&self) -> usize {
+        self.0
     }
 }
 
@@ -104,6 +118,7 @@ fn effects(
     mut points: EventReader<PointEvent>,
     mut money: EventReader<MoneyEvent>,
     mut total_points: ResMut<Points>,
+    mut total_total_points: ResMut<TotalPoints>,
     mut total_money: ResMut<Money>,
 ) {
     if !points.is_empty() || !money.is_empty() {
@@ -130,6 +145,7 @@ fn effects(
 
     for event in points.read() {
         total_points.0 += event.points;
+        total_total_points.0 += event.points;
         flash_text_rotate(
             &mut commands,
             &server,

@@ -126,7 +126,7 @@ fn state(mut commands: Commands, input: Res<ButtonInput<KeyCode>>) {
 }
 
 fn reset(mut commands: Commands) {
-    commands.set_state(GameState::StartGame);
+    commands.set_state(GameState::ToLeaderboard);
 }
 
 fn start(mut commands: Commands, mut writer: EventWriter<SelectionEvent>) {
