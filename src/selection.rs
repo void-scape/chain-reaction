@@ -2,15 +2,14 @@ use avian2d::prelude::ColliderDisabled;
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_optix::pixel_perfect::{HIGH_RES_LAYER, OuterCamera};
-use convert_case::{Case, Casing};
+use bevy_optix::pixel_perfect::OuterCamera;
 
 use crate::feature::grid::{FeatureSlot, SlotFeature, SlotFeatureOf};
-use crate::feature::{Feature, FeatureSpawner, Rarity};
+use crate::feature::{FeatureSpawner, Rarity};
 use crate::sandbox;
 use crate::stage::{AdvanceEvent, StageSet};
 use crate::state::{GameState, Playing, StateAppExt, remove_entities};
-use crate::tooltips::Tooltips;
+use crate::tooltips::{Hover, ShowTooltips};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct SelectionSet;
@@ -118,26 +117,10 @@ const SELECTIONZ: f32 = 800.;
 fn spawn_selection(
     mut commands: Commands,
     mut packs: Single<&mut FeaturePacks>,
-    features: Query<(&Tooltips, &Rarity, &FeatureSpawner)>,
+    features: Query<(&Rarity, &FeatureSpawner)>,
 
     mut rare_offset: Local<f32>,
 ) {
-    commands.spawn((
-        Selection,
-        Sprite::from_color(
-            Color::BLACK.with_alpha(0.95),
-            Vec2::new(crate::RES_WIDTH, crate::RES_HEIGHT),
-        ),
-        Transform::from_xyz(0., 0., SELECTIONZ - 1.),
-    ));
-
-    commands.spawn((
-        Selection,
-        Text2d::new("SELECT A TOWER"),
-        HIGH_RES_LAYER,
-        Transform::from_xyz(0., crate::RES_HEIGHT / 3., SELECTIONZ),
-    ));
-
     let mut rng = rand::thread_rng();
 
     let Some(pack) = packs.0.pop() else {
@@ -147,13 +130,13 @@ fn spawn_selection(
 
     let samples = features
         .iter()
-        .map(|(tips, prob, spawner)| ((tips, spawner, prob), prob.as_prob(*rare_offset)))
+        .map(|(prob, spawner)| ((spawner, prob), prob.as_prob(*rare_offset)))
         .collect::<Vec<_>>();
 
     const RARE_INCREASE: f32 = 0.05;
     if samples
         .iter()
-        .any(|((_, _, prob), _)| matches!(prob, Rarity::Rare))
+        .any(|((_, prob), _)| matches!(prob, Rarity::Rare))
     {
         *rare_offset = 0.;
     } else {
@@ -168,7 +151,8 @@ fn spawn_selection(
     let positions = [-300., 0., 300.];
     let y = crate::RES_HEIGHT / 3. - 50.;
 
-    for ((tips, spawner, _), x) in features.into_iter().zip(positions) {
+    let mut delay = 0.0;
+    for ((spawner, _), x) in features.into_iter().zip(positions) {
         let mut selection = commands.spawn((
             spawner.clone(),
             Selection,
@@ -177,20 +161,8 @@ fn spawn_selection(
             Transform::from_xyz(x, y, SELECTIONZ),
         ));
         spawner.0(&mut selection);
-
-        commands.spawn((
-            Selection,
-            Text2d::new(tips.name.to_case(Case::Title)),
-            Transform::from_xyz(x, y - 40., SELECTIONZ),
-            HIGH_RES_LAYER,
-        ));
-
-        commands.spawn((
-            Selection,
-            Text2d::new(tips.desc),
-            Transform::from_xyz(x, y - 80., SELECTIONZ),
-            HIGH_RES_LAYER,
-        ));
+        selection.insert(ShowTooltips { delay });
+        delay += 0.1;
     }
 
     commands.set_state(SelectionState::SelectAndSpawn);
@@ -200,46 +172,58 @@ fn select_feature(
     mut commands: Commands,
     options: Query<
         (Entity, &FeatureSpawner, &GlobalTransform),
-        (With<SelectionFeature>, With<Feature>),
+        //(With<SelectionFeature>, With<Feature>),
     >,
+
+    child_ofs: Query<&ChildOf>,
 
     input: Res<ButtonInput<MouseButton>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera: Single<(&Camera, &GlobalTransform), With<OuterCamera>>,
 
     selection_entities: Query<Entity, With<Selection>>,
+
+    hovered: Single<&ChildOf, With<Hover>>,
 ) {
     let (camera, gt) = camera.into_inner();
     if !input.just_pressed(MouseButton::Left) {
         return;
     }
 
-    let Some(world_position) = window
-        .cursor_position()
-        .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
-        .map(|ray| ray.origin.truncate() / crate::RESOLUTION_SCALE)
-    else {
-        return;
-    };
-
-    let Some((_, selected_feature, transform)) = options.iter().min_by(|a, b| {
-        let a = world_position.distance_squared(a.2.translation().xy());
-        let b = world_position.distance_squared(b.2.translation().xy());
-
-        a.total_cmp(&b)
+    let Some((_, selected_feature, transform)) = options.iter().find(|(entity, _, _)| {
+        child_ofs
+            .get(hovered.parent())
+            .is_ok_and(|child_of| child_of.parent() == *entity)
     }) else {
         return;
     };
 
-    if transform
-        .compute_transform()
-        .translation
-        .xy()
-        .distance(world_position)
-        > 50.0
-    {
-        return;
-    }
+    //let Some(world_position) = window
+    //    .cursor_position()
+    //    .and_then(|cursor| camera.viewport_to_world(gt, cursor).ok())
+    //    .map(|ray| ray.origin.truncate() / crate::RESOLUTION_SCALE)
+    //else {
+    //    return;
+    //};
+    //
+    //let Some((_, selected_feature, transform)) = options.iter().min_by(|a, b| {
+    //    let a = world_position.distance_squared(a.2.translation().xy());
+    //    let b = world_position.distance_squared(b.2.translation().xy());
+    //
+    //    a.total_cmp(&b)
+    //}) else {
+    //    return;
+    //};
+    //
+    //if transform
+    //    .compute_transform()
+    //    .translation
+    //    .xy()
+    //    .distance(world_position)
+    //    > 50.0
+    //{
+    //    return;
+    //}
 
     commands.spawn(SelectedFeature(selected_feature.clone()));
     if !sandbox::ENABLED {
