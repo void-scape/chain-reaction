@@ -43,7 +43,7 @@
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
     var value: f32;
-    let screen_pixel_size = 1.0 / vec2f(1024, 1024);
+    let screen_pixel_size = 1.0 / vec2f(1125, 1125);
     let aspect = screen_pixel_size.y / screen_pixel_size.x;
 
     let rot = radians(45.0);
@@ -75,8 +75,8 @@ fn fragment(input: VertexOutput) -> @location(0) vec4<f32> {
     value = smoothstep(edge - 0.05, edge, 0.95 * value);
     value += squareDist * 0.1;
 
-    var color = mix(vec4<f32>(0.259, 0.141, 0.2, 1.0), vec4<f32>(0.141, 0.133, 0.204, 1.0), value);
-    color.a = 0.25 * clamp(value, 0.0, 1.0);
+    var color = mix(vec4<f32>(0.2, 0.22352, 0.2549019, 1.0), vec4<f32>(0.05, 0.05, 0.05, 1.0), value);
+    color.a = 0.25 * clamp(value, 0.0, 0.8);
 
     return color;
 }

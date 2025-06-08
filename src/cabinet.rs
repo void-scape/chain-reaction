@@ -453,7 +453,7 @@ fn spawn_light(commands: &mut Commands, color: impl Into<Color>) {
                 //    Quat::from_rotation_z(-PI / 8. + PI),
                 //    Quat::from_rotation_z(PI / 8. + PI),
                 //)
-                point_light_intensity(2., 1.9),
+                point_light_intensity(5., 4.8),
             ),
         );
 }
@@ -468,7 +468,7 @@ fn background(
 ) {
     commands.spawn((
         Cabinet,
-        Mesh2d(meshes.add(Rectangle::new(1024., 1024.))),
+        Mesh2d(meshes.add(Rectangle::new(1125., 1125.))),
         MeshMaterial2d(diamonds.add(Diamonds {})),
     ));
 }
