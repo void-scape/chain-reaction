@@ -28,9 +28,9 @@ env:
 
   # Whether to build and package a release for a given target platform.
   build_for_web: true
-  build_for_linux: false
-  build_for_windows: false
-  build_for_macos: false
+  build_for_linux: true
+  build_for_windows: true
+  build_for_macos: true
 
   # Whether to upload the packages produced by this workflow to a GitHub release.
   upload_to_github: true
@@ -173,6 +173,7 @@ jobs:
         if: ${{ env.is_platform_enabled == 'true' }}
         uses: actions/checkout@v4
         with:
+          submodules: "recursive"
           lfs: ${{ env.git_lfs }}
 
       - name: Install Rust toolchain

@@ -275,7 +275,7 @@ fn slings(
     };
 
     if collisions.get(ball, sling.sensor).is_some() {
-        velocity.set_impulse(sling.impulse * 1.25);
+        velocity.set_impulse(sling.impulse * 1.2);
     }
 }
 
